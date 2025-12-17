@@ -1,6 +1,15 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IStudentService StudentService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 @rendermode InteractiveServer
 
 <PageTitle>Dashboard</PageTitle>
@@ -33,7 +42,28 @@
                             <h3>Students</h3>
                         </div>
                         <div class="card-body">
-                            <p class="text-muted">Student management coming soon. You'll be able to add and manage your children here.</p>
+                            @if (students != null && students.Any())
+                            {
+                                <ul class="list-group list-group-flush">
+                                    @foreach (var student in students)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <strong>@student.Name</strong>
+                                            <a href="/DailyLogs/Add/@student.Id" class="btn btn-sm btn-primary">
+                                                Add daily log
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else if (students != null)
+                            {
+                                <p class="text-muted">No students found. <a href="/Students/Add">Add your first student</a> to get started.</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Loading students...</p>
+                            }
                         </div>
                     </div>
                 </div>
@@ -70,3 +100,32 @@
         </div>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private List<Student>? students;
+    private ApplicationUser? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null && currentUser.FamilyId.HasValue)
+            {
+                // Load family if exists using DbContext
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser?.FamilyId != null)
+                {
+                    students = (await StudentService.GetStudentsByFamilyIdAsync(currentUser.FamilyId.Value)).ToList();
+                }
+            }
+        }
+    }
+}
