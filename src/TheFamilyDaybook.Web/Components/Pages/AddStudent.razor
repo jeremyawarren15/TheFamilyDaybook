@@ -1,0 +1,138 @@
+@page "/Students/Add"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@using TheFamilyDaybook.Web.ViewModels
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IStudentService StudentService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Add Student</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Add Student</h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @ErrorMessage
+                        </div>
+                    }
+
+                    @if (currentUser != null && currentUser.FamilyId.HasValue)
+                    {
+                        <EditForm Model="@studentModel" OnValidSubmit="@HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                                <InputText id="name" class="form-control" @bind-Value="studentModel.Name" />
+                                <ValidationMessage For="@(() => studentModel.Name)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                                <InputDate id="dateOfBirth" class="form-control" @bind-Value="studentModel.DateOfBirth" />
+                                <ValidationMessage For="@(() => studentModel.DateOfBirth)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notes</label>
+                                <InputTextArea id="notes" class="form-control" rows="4" @bind-Value="studentModel.Notes" />
+                                <ValidationMessage For="@(() => studentModel.Notes)" />
+                                <small class="form-text text-muted">Optional notes about this student.</small>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="/Students" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                    @if (isLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    Add Student
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                    else if (currentUser != null)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <p>You must be associated with a family to add students. Please contact support if you need assistance.</p>
+                        </div>
+                        <a href="/Students" class="btn btn-secondary">Back to Students</a>
+                    }
+                    else
+                    {
+                        <p>Loading...</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ApplicationUser? currentUser;
+    private StudentModel studentModel = new();
+    private string? ErrorMessage;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                // Load family if exists using DbContext
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (currentUser == null || !currentUser.FamilyId.HasValue)
+        {
+            ErrorMessage = "You must be associated with a family to add students.";
+            return;
+        }
+
+        ErrorMessage = null;
+        isLoading = true;
+
+        var result = await StudentService.CreateStudentAsync(currentUser.FamilyId.Value, studentModel);
+
+        if (result.Succeeded)
+        {
+            NavigationManager.NavigateTo("/Students");
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+            isLoading = false;
+        }
+    }
+}
+

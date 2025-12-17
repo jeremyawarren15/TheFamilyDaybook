@@ -14,5 +14,6 @@ public class Family
     
     // Navigation properties
     public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
+    public ICollection<Student> Students { get; set; } = new List<Student>();
 }
 

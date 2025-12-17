@@ -1,0 +1,194 @@
+@page "/Students"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IStudentService StudentService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Students</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Students</h1>
+                <a href="/Students/Add" class="btn btn-primary">
+                    <span class="bi bi-plus-circle"></span> Add Student
+                </a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @ErrorMessage
+                </div>
+            }
+
+            @if (students != null && students.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Date of Birth</th>
+                                <th>Age</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var student in students)
+                            {
+                                <tr>
+                                    <td>@student.Name</td>
+                                    <td>@(student.DateOfBirth?.ToString("MM/dd/yyyy") ?? "N/A")</td>
+                                    <td>@GetAge(student.DateOfBirth)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(student.Notes) ? "—" : (student.Notes.Length > 50 ? student.Notes[..50] + "..." : student.Notes))</td>
+                                    <td>
+                                        <a href="/Students/Edit/@student.Id" class="btn btn-sm btn-outline-primary me-2">
+                                            <span class="bi bi-pencil"></span> Edit
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmation(student)">
+                                            <span class="bi bi-trash"></span> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (students != null)
+            {
+                <div class="alert alert-info" role="alert">
+                    <p>No students found. <a href="/Students/Add">Add your first student</a> to get started.</p>
+                </div>
+            }
+            else
+            {
+                <p>Loading...</p>
+            }
+        </div>
+    </div>
+</div>
+
+@if (studentToDelete != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>@studentToDelete.Name</strong>? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<Student>? students;
+    private ApplicationUser? currentUser;
+    private Student? studentToDelete;
+    private string? ErrorMessage;
+    private bool isDeleting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null && currentUser.FamilyId.HasValue)
+            {
+                // Load family if exists using DbContext
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser?.FamilyId != null)
+                {
+                    students = (await StudentService.GetStudentsByFamilyIdAsync(currentUser.FamilyId.Value)).ToList();
+                }
+            }
+        }
+    }
+
+    private string GetAge(DateTime? dateOfBirth)
+    {
+        if (!dateOfBirth.HasValue)
+            return "N/A";
+
+        var today = DateTime.Today;
+        var age = today.Year - dateOfBirth.Value.Year;
+        if (dateOfBirth.Value.Date > today.AddYears(-age))
+            age--;
+
+        return age.ToString();
+    }
+
+    private void ShowDeleteConfirmation(Student student)
+    {
+        studentToDelete = student;
+    }
+
+    private void CancelDelete()
+    {
+        studentToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (studentToDelete == null)
+            return;
+
+        isDeleting = true;
+        ErrorMessage = null;
+
+        var result = await StudentService.DeleteStudentAsync(studentToDelete.Id);
+
+        if (result.Succeeded)
+        {
+            // Refresh the list
+            if (currentUser?.FamilyId != null)
+            {
+                students = (await StudentService.GetStudentsByFamilyIdAsync(currentUser.FamilyId.Value)).ToList();
+            }
+            studentToDelete = null;
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+        }
+
+        isDeleting = false;
+    }
+}
+
