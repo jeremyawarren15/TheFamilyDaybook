@@ -1,0 +1,56 @@
+@page "/Account/RegisterSuccess"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Identity
+@using TheFamilyDaybook.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Registration Successful</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Registration Successful</h3>
+                </div>
+                <div class="card-body">
+                    <p>Your account has been created successfully. Signing you in...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Email { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(Email))
+        {
+            var user = await UserManager.FindByEmailAsync(Email);
+            if (user != null)
+            {
+                // Sign in via GET request - this allows cookies to be set properly
+                await SignInManager.SignInAsync(user, isPersistent: false);
+                // Small delay then redirect
+                await Task.Delay(500);
+                NavigationManager.NavigateTo("/");
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/Account/Login");
+            }
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/Account/Login");
+        }
+    }
+}
+

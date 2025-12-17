@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - The Family Daybook</title>
+    <base href="~/" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/app.css" />
+    <link rel="icon" type="image/png" href="~/favicon.png" />
+</head>
+<body>
+    <div class="page">
+        <div class="sidebar">
+            <div class="top-row ps-3 navbar navbar-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="/">The Family Daybook</a>
+                </div>
+            </div>
+            <div class="nav-scrollable">
+                <nav class="nav flex-column">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="nav-item px-3">
+                            <a class="nav-link" href="/">
+                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                            </a>
+                        </div>
+                        <div class="nav-item px-3">
+                            <a class="nav-link" href="/Account/Profile">
+                                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Profile
+                            </a>
+                        </div>
+                        <div class="nav-item px-3">
+                            <a class="nav-link" href="/Account/Logout">
+                                <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Logout
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="nav-item px-3">
+                            <a class="nav-link" href="/Account/Login">
+                                <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Login
+                            </a>
+                        </div>
+                        <div class="nav-item px-3">
+                            <a class="nav-link" href="/Account/Register">
+                                <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Register
+                            </a>
+                        </div>
+                    }
+                </nav>
+            </div>
+        </div>
+
+        <main>
+            <div class="top-row px-4">
+                <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            </div>
+
+            <article class="content px-4">
+                @RenderBody()
+            </article>
+        </main>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+

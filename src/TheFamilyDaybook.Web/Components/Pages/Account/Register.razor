@@ -1,0 +1,135 @@
+@page "/Account/Register"
+@using Microsoft.AspNetCore.Components.Authorization
+@using TheFamilyDaybook.Web.Services
+@using TheFamilyDaybook.Web.ViewModels
+@inject IAccountService AccountService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+
+<PageTitle>Register</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Register</h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @ErrorMessage
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(SuccessMessage))
+                    {
+                        <div class="alert alert-success" role="alert">
+                            @SuccessMessage
+                        </div>
+                    }
+
+                    <EditForm Model="@registerModel" OnValidSubmit="@HandleRegister">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="mb-3">
+                            <label for="firstName" class="form-label">First Name</label>
+                            <InputText id="firstName" class="form-control" @bind-Value="registerModel.FirstName" />
+                            <ValidationMessage For="@(() => registerModel.FirstName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="lastName" class="form-label">Last Name</label>
+                            <InputText id="lastName" class="form-control" @bind-Value="registerModel.LastName" />
+                            <ValidationMessage For="@(() => registerModel.LastName)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <InputText id="email" class="form-control" @bind-Value="registerModel.Email" />
+                            <ValidationMessage For="@(() => registerModel.Email)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <InputText id="password" type="password" class="form-control" @bind-Value="registerModel.Password" />
+                            <ValidationMessage For="@(() => registerModel.Password)" />
+                            <small class="form-text text-muted">
+                                Password must be at least 8 characters and contain uppercase, lowercase, and a digit.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <InputText id="confirmPassword" type="password" class="form-control" @bind-Value="registerModel.ConfirmPassword" />
+                            <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="familyName" class="form-label">Family Name (Optional)</label>
+                            <InputText id="familyName" class="form-control" @bind-Value="registerModel.FamilyName" />
+                            <small class="form-text text-muted">
+                                If you're creating a new family, enter a name. If joining an existing family, leave blank and ask a family member to add you.
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Register
+                        </button>
+                    </EditForm>
+
+                    <div class="mt-3">
+                        <p>Already have an account? <a href="/Account/Login">Login here</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterModel registerModel = new();
+    private string? ErrorMessage;
+    private string? SuccessMessage;
+    private bool isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+        isLoading = true;
+
+        try
+        {
+            var result = await AccountService.RegisterAsync(registerModel);
+
+            if (result.Succeeded)
+            {
+                // Redirect to a page that handles sign-in via GET request
+                // This avoids "Headers are read-only" errors because GET requests
+                // allow cookies to be set before the response starts
+                NavigationManager.NavigateTo($"/Account/RegisterSuccess?email={Uri.EscapeDataString(registerModel.Email)}");
+            }
+            else
+            {
+                ErrorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+

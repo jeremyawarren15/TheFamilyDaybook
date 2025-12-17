@@ -1,7 +1,72 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dashboard</PageTitle>
 
-<h1>Hello, world!</h1>
+<AuthorizeView>
+    <Authorized>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h1>Dashboard</h1>
+                    <p class="lead">Welcome to The Family Daybook</p>
+                </div>
+            </div>
 
-Welcome to your new app.
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Weekly Goals</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Weekly goals feature coming soon. You'll be able to set and track goals for each student and subject here.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Students</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Student management coming soon. You'll be able to add and manage your children here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Today's Daily Logs</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Daily log tracking coming soon. You'll be able to create daily logs for each student here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="container mt-5">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Welcome to The Family Daybook</h3>
+                        </div>
+                        <div class="card-body">
+                            <p>Please <a href="/Account/Login">log in</a> or <a href="/Account/Register">register</a> to get started.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>

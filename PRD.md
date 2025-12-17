@@ -16,11 +16,11 @@ The Family Daybook is a Blazor web application designed to help homeschool paren
 ## Phase 1: Foundation & MVP (Minimum Viable Product)
 
 ### 1.1 Authentication & User Management
-- [ ] Set up authentication system (ASP.NET Core Identity or similar)
-- [ ] User registration/login pages
-- [ ] User session management
-- [ ] Support multiple users (parents) per family
-- [ ] Basic user profile management
+- [x] Set up authentication system (ASP.NET Core Identity or similar)
+- [x] User registration/login pages
+- [x] User session management
+- [x] Support multiple users (parents) per family
+- [x] Basic user profile management
 
 ### 1.2 Database Setup
 - [ ] Configure Entity Framework with ApplicationDbContext

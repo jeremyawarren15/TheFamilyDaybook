@@ -1,0 +1,154 @@
+@page "/Account/Profile"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@using TheFamilyDaybook.Web.ViewModels
+@attribute [Authorize]
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAccountService AccountService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@rendermode InteractiveServer
+
+<PageTitle>Profile</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>User Profile</h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @ErrorMessage
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(SuccessMessage))
+                    {
+                        <div class="alert alert-success" role="alert">
+                            @SuccessMessage
+                        </div>
+                    }
+
+                    @if (currentUser != null)
+                    {
+                        <EditForm Model="@profileModel" OnValidSubmit="@HandleUpdate">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="text" class="form-control" value="@currentUser.Email" disabled />
+                                <small class="form-text text-muted">Email cannot be changed</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="firstName" class="form-label">First Name</label>
+                                <InputText id="firstName" class="form-control" @bind-Value="profileModel.FirstName" />
+                                <ValidationMessage For="@(() => profileModel.FirstName)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="lastName" class="form-label">Last Name</label>
+                                <InputText id="lastName" class="form-control" @bind-Value="profileModel.LastName" />
+                                <ValidationMessage For="@(() => profileModel.LastName)" />
+                            </div>
+
+                            @if (currentUser.Family != null)
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Family</label>
+                                    <input type="text" class="form-control" value="@currentUser.Family.Name" disabled />
+                                </div>
+                            }
+
+                            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                Update Profile
+                            </button>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p>Loading...</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ApplicationUser? currentUser;
+    private ProfileModel profileModel = new();
+    private string? ErrorMessage;
+    private string? SuccessMessage;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                // Load family if exists using DbContext
+                if (currentUser.FamilyId.HasValue)
+                {
+                    using var context = await DbContextFactory.CreateDbContextAsync();
+                    currentUser = await context.Users
+                        .Include(u => u.Family)
+                        .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+                }
+
+                if (currentUser != null)
+                {
+                    profileModel.FirstName = currentUser.FirstName;
+                    profileModel.LastName = currentUser.LastName;
+                }
+            }
+        }
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (currentUser == null)
+        {
+            return;
+        }
+
+        ErrorMessage = null;
+        SuccessMessage = null;
+        isLoading = true;
+
+        var result = await AccountService.UpdateProfileAsync(currentUser.Id, profileModel);
+
+        if (result.Succeeded)
+        {
+            SuccessMessage = result.SuccessMessage;
+            // Refresh the authentication state
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+        }
+
+        isLoading = false;
+    }
+}
+
