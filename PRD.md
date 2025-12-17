@@ -23,10 +23,10 @@ The Family Daybook is a Blazor web application designed to help homeschool paren
 - [x] Basic user profile management
 
 ### 1.2 Database Setup
-- [ ] Configure Entity Framework with ApplicationDbContext
-- [ ] Set up database migrations
-- [ ] Configure database connection (SQLite for dev, PostgreSQL/SQL Server for production)
-- [ ] Seed initial data if needed
+- [x] Configure Entity Framework with ApplicationDbContext
+- [x] Set up database migrations
+- [x] Configure database connection (SQLite for dev, PostgreSQL/SQL Server for production)
+- [x] Seed initial data if needed
 
 ### 1.3 Student Management (Core)
 - [ ] Create Student model (Name, DateOfBirth, Notes, etc.)
