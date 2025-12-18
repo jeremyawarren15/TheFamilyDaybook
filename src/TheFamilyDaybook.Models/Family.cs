@@ -16,5 +16,6 @@ public class Family
     public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
     public ICollection<Student> Students { get; set; } = new List<Student>();
     public ICollection<Subject> Subjects { get; set; } = new List<Subject>();
+    public ICollection<Metric> Metrics { get; set; } = new List<Metric>();
 }
 
