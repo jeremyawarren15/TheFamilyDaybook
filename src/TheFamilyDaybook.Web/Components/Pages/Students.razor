@@ -58,6 +58,12 @@
                                         <a href="/Students/Edit/@student.Id" class="btn btn-sm btn-outline-primary me-2">
                                             <span class="bi bi-pencil"></span> Edit
                                         </a>
+                                        <a href="/Students/@student.Id/Metrics" class="btn btn-sm btn-outline-info me-2">
+                                            <span class="bi bi-graph-up-arrow"></span> Metrics
+                                        </a>
+                                        <a href="/Students/@student.Id/DailyLog/SelectSubject" class="btn btn-sm btn-outline-success me-2">
+                                            <span class="bi bi-plus-circle"></span> Log
+                                        </a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmation(student)">
                                             <span class="bi bi-trash"></span> Delete
                                         </button>

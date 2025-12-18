@@ -11,6 +11,8 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject ISubjectService SubjectService
+@inject IStudentSubjectService StudentSubjectService
+@inject IStudentService StudentService
 @inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 @inject NavigationManager NavigationManager
 @rendermode InteractiveServer
@@ -62,6 +64,47 @@
                                 </button>
                             </div>
                         </EditForm>
+
+                        <hr class="my-4" />
+
+                        <h4>Students with this Subject</h4>
+                        @if (allStudents != null && allStudents.Any())
+                        {
+                            <div class="mb-3">
+                                @foreach (var student in allStudents)
+                                {
+                                    var isAssigned = studentAssignments.ContainsKey(student.Id) && studentAssignments[student.Id];
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="student_@student.Id" 
+                                               checked="@isAssigned"
+                                               @onchange="@((ChangeEventArgs e) => ToggleStudentAssignment(student.Id, e.Value?.ToString() == "True"))" />
+                                        <label class="form-check-label" for="student_@student.Id">
+                                            @student.Name
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                            <button type="button" class="btn btn-primary" @onclick="SaveStudentAssignments" disabled="@isSavingAssignments">
+                                @if (isSavingAssignments)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Save Student Assignments
+                            </button>
+                            @if (!string.IsNullOrEmpty(assignmentMessage))
+                            {
+                                <div class="alert @(assignmentMessage.Contains("error") || assignmentMessage.Contains("Error") ? "alert-danger" : "alert-success") mt-2" role="alert">
+                                    @assignmentMessage
+                                </div>
+                            }
+                        }
+                        else if (allStudents != null)
+                        {
+                            <div class="alert alert-info" role="alert">
+                                <p>No students found. <a href="/Students/Add">Add a student</a> first.</p>
+                            </div>
+                        }
                     }
                     else if (isLoading)
                     {
@@ -89,6 +132,10 @@
     private SubjectModel subjectModel = new();
     private string? ErrorMessage;
     private bool isLoading = false;
+    private List<Student>? allStudents;
+    private Dictionary<int, bool> studentAssignments = new();
+    private bool isSavingAssignments = false;
+    private string? assignmentMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -121,6 +168,19 @@
                     {
                         subjectModel.Name = subject.Name;
                         subjectModel.Description = subject.Description;
+
+                        // Load students and their assignments
+                        if (currentUser.FamilyId.HasValue)
+                        {
+                            allStudents = (await StudentService.GetStudentsByFamilyIdAsync(currentUser.FamilyId.Value)).ToList();
+                            var assignedStudents = await StudentSubjectService.GetStudentsForSubjectAsync(SubjectId);
+                            var assignedStudentIds = assignedStudents.Select(s => s.Id).ToHashSet();
+
+                            studentAssignments = allStudents.ToDictionary(
+                                s => s.Id,
+                                s => assignedStudentIds.Contains(s.Id)
+                            );
+                        }
                     }
                     else
                     {
@@ -157,6 +217,67 @@
             ErrorMessage = result.ErrorMessage;
             isLoading = false;
         }
+    }
+
+    private void ToggleStudentAssignment(int studentId, bool isAssigned)
+    {
+        if (studentAssignments.ContainsKey(studentId))
+        {
+            studentAssignments[studentId] = isAssigned;
+        }
+        else
+        {
+            studentAssignments[studentId] = isAssigned;
+        }
+        assignmentMessage = null;
+    }
+
+    private async Task SaveStudentAssignments()
+    {
+        if (subject == null || allStudents == null)
+            return;
+
+        isSavingAssignments = true;
+        assignmentMessage = null;
+        ErrorMessage = null;
+
+        try
+        {
+            foreach (var student in allStudents)
+            {
+                var shouldBeAssigned = studentAssignments.ContainsKey(student.Id) && studentAssignments[student.Id];
+                var isCurrentlyAssigned = await StudentSubjectService.StudentHasSubjectAsync(student.Id, SubjectId);
+
+                if (shouldBeAssigned && !isCurrentlyAssigned)
+                {
+                    var result = await StudentSubjectService.AssignSubjectToStudentAsync(student.Id, SubjectId);
+                    if (!result.Succeeded)
+                    {
+                        assignmentMessage = $"Error assigning subject to {student.Name}: {result.ErrorMessage}";
+                        isSavingAssignments = false;
+                        return;
+                    }
+                }
+                else if (!shouldBeAssigned && isCurrentlyAssigned)
+                {
+                    var result = await StudentSubjectService.RemoveSubjectFromStudentAsync(student.Id, SubjectId);
+                    if (!result.Succeeded)
+                    {
+                        assignmentMessage = $"Error removing subject from {student.Name}: {result.ErrorMessage}";
+                        isSavingAssignments = false;
+                        return;
+                    }
+                }
+            }
+
+            assignmentMessage = "Student assignments saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            assignmentMessage = $"An error occurred: {ex.Message}";
+        }
+
+        isSavingAssignments = false;
     }
 }
 

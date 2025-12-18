@@ -9,6 +9,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject IStudentService StudentService
+@inject IDailyLogService DailyLogService
 @inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 @rendermode InteractiveServer
 
@@ -50,7 +51,7 @@
                                         {
                                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                                 <strong>@student.Name</strong>
-                                                <a href="/DailyLogs/Add/@student.Id" class="btn btn-sm btn-primary">
+                                                <a href="/Students/@student.Id/DailyLog/SelectSubject" class="btn btn-sm btn-primary">
                                                     Add daily log
                                                 </a>
                                             </li>
@@ -75,9 +76,56 @@
                         <div class="card">
                             <div class="card-header">
                                 <h3>Today's Daily Logs</h3>
+                                <small class="text-muted">@DateTime.Today.ToString("MMMM d, yyyy")</small>
                             </div>
                             <div class="card-body">
-                                <p class="text-muted">Daily log tracking coming soon. You'll be able to create daily logs for each student here.</p>
+                                @if (todaysLogs != null)
+                                {
+                                    @if (todaysLogs.Any())
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Student</th>
+                                                        <th>Subject</th>
+                                                        <th>Notes</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var log in todaysLogs.OrderBy(l => l.Student.Name).ThenBy(l => l.Subject.Name))
+                                                    {
+                                                        <tr>
+                                                            <td><strong>@log.Student.Name</strong></td>
+                                                            <td>@log.Subject.Name</td>
+                                                            <td>@(string.IsNullOrWhiteSpace(log.Notes) ? "—" : (log.Notes.Length > 50 ? log.Notes[..50] + "..." : log.Notes))</td>
+                                                            <td>
+                                                                <a href="/DailyLogs/Edit/@log.Id" class="btn btn-sm btn-outline-primary">
+                                                                    <span class="bi bi-pencil"></span> Edit
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center py-4">
+                                            <p class="text-muted mb-3">
+                                                <span class="bi bi-journal-text" style="font-size: 2rem; opacity: 0.5;"></span>
+                                            </p>
+                                            <p class="text-muted">No daily logs for today yet.</p>
+                                            <p class="text-muted small">Start tracking your students' progress by <a href="/Students">adding a daily log</a>.</p>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="text-muted">Loading today's logs...</p>
+                                }
                             </div>
                         </div>
                     </div>
@@ -105,6 +153,7 @@
 
 @code {
     private List<Student>? students;
+    private List<DailyLog>? todaysLogs;
     private ApplicationUser? currentUser;
 
     protected override async Task OnInitializedAsync()
@@ -120,12 +169,34 @@
                 // Load family if exists using DbContext
                 using var context = await DbContextFactory.CreateDbContextAsync();
                 currentUser = await context.Users
-                    .Include(u => u.Family)
+                    .Include(u => u.Family!)
+                    .ThenInclude(f => f.Students)
                     .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
 
                 if (currentUser?.FamilyId != null)
                 {
                     students = (await StudentService.GetStudentsByFamilyIdAsync(currentUser.FamilyId.Value)).ToList();
+                    
+                    // Load today's daily logs for all students in the family
+                    var today = DateTime.Today;
+                    var todayUtc = new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
+                    var allLogs = new List<DailyLog>();
+                    
+                    if (currentUser.Family?.Students != null)
+                    {
+                        foreach (var student in currentUser.Family.Students)
+                        {
+                            var studentLogs = await DailyLogService.GetDailyLogsForStudentAsync(student.Id);
+                            // Filter to today's logs (compare UTC dates)
+                            var todayLogs = studentLogs.Where(log => log.Date.Date == todayUtc.Date).ToList();
+                            allLogs.AddRange(todayLogs);
+                        }
+                    }
+                    
+                    todaysLogs = allLogs
+                        .OrderBy(l => l.Student.Name)
+                        .ThenBy(l => l.Subject.Name)
+                        .ToList();
                 }
             }
         }

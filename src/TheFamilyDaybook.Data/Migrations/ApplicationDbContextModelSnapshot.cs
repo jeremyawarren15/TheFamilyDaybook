@@ -236,6 +236,77 @@ namespace TheFamilyDaybook.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("TheFamilyDaybook.Models.DailyLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("StudentId", "SubjectId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("DailyLogs");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.DailyLogMetricValue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool?>("BooleanValue")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CategoricalValue")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("DailyLogId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MetricId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("NumericValue")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MetricId");
+
+                    b.HasIndex("DailyLogId", "MetricId")
+                        .IsUnique();
+
+                    b.ToTable("DailyLogMetricValues");
+                });
+
             modelBuilder.Entity("TheFamilyDaybook.Models.Family", b =>
                 {
                     b.Property<int>("Id")
@@ -255,6 +326,57 @@ namespace TheFamilyDaybook.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Families");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.Metric", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int?>("FamilyId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsTemplate")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MetricType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NumericConfig")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PossibleValues")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.ToTable("Metrics");
                 });
 
             modelBuilder.Entity("TheFamilyDaybook.Models.Student", b =>
@@ -291,6 +413,107 @@ namespace TheFamilyDaybook.Data.Migrations
                     b.HasIndex("FamilyId");
 
                     b.ToTable("Students");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.StudentMetric", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AppliesToAllSubjects")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MetricId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MetricId");
+
+                    b.HasIndex("StudentId", "MetricId")
+                        .IsUnique();
+
+                    b.ToTable("StudentMetrics");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.StudentSubject", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("StudentId", "SubjectId")
+                        .IsUnique();
+
+                    b.ToTable("StudentSubjects");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.StudentSubjectMetric", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MetricId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StudentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MetricId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("StudentId", "SubjectId", "MetricId")
+                        .IsUnique();
+
+                    b.ToTable("StudentSubjectMetrics");
                 });
 
             modelBuilder.Entity("TheFamilyDaybook.Models.Subject", b =>
@@ -387,6 +610,54 @@ namespace TheFamilyDaybook.Data.Migrations
                     b.Navigation("Family");
                 });
 
+            modelBuilder.Entity("TheFamilyDaybook.Models.DailyLog", b =>
+                {
+                    b.HasOne("TheFamilyDaybook.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TheFamilyDaybook.Models.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.DailyLogMetricValue", b =>
+                {
+                    b.HasOne("TheFamilyDaybook.Models.DailyLog", "DailyLog")
+                        .WithMany("MetricValues")
+                        .HasForeignKey("DailyLogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TheFamilyDaybook.Models.Metric", "Metric")
+                        .WithMany()
+                        .HasForeignKey("MetricId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DailyLog");
+
+                    b.Navigation("Metric");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.Metric", b =>
+                {
+                    b.HasOne("TheFamilyDaybook.Models.Family", "Family")
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Family");
+                });
+
             modelBuilder.Entity("TheFamilyDaybook.Models.Student", b =>
                 {
                     b.HasOne("TheFamilyDaybook.Models.Family", "Family")
@@ -396,6 +667,71 @@ namespace TheFamilyDaybook.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Family");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.StudentMetric", b =>
+                {
+                    b.HasOne("TheFamilyDaybook.Models.Metric", "Metric")
+                        .WithMany()
+                        .HasForeignKey("MetricId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TheFamilyDaybook.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Metric");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.StudentSubject", b =>
+                {
+                    b.HasOne("TheFamilyDaybook.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TheFamilyDaybook.Models.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("TheFamilyDaybook.Models.StudentSubjectMetric", b =>
+                {
+                    b.HasOne("TheFamilyDaybook.Models.Metric", "Metric")
+                        .WithMany()
+                        .HasForeignKey("MetricId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TheFamilyDaybook.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TheFamilyDaybook.Models.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Metric");
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("TheFamilyDaybook.Models.Subject", b =>
@@ -409,8 +745,15 @@ namespace TheFamilyDaybook.Data.Migrations
                     b.Navigation("Family");
                 });
 
+            modelBuilder.Entity("TheFamilyDaybook.Models.DailyLog", b =>
+                {
+                    b.Navigation("MetricValues");
+                });
+
             modelBuilder.Entity("TheFamilyDaybook.Models.Family", b =>
                 {
+                    b.Navigation("Metrics");
+
                     b.Navigation("Students");
 
                     b.Navigation("Subjects");

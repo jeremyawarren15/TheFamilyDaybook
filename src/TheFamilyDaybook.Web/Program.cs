@@ -109,6 +109,26 @@ builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
         .As<ISubjectService>()
         .InstancePerLifetimeScope();
     
+    containerBuilder.RegisterType<MetricService>()
+        .As<IMetricService>()
+        .InstancePerLifetimeScope();
+    
+    containerBuilder.RegisterType<StudentSubjectService>()
+        .As<IStudentSubjectService>()
+        .InstancePerLifetimeScope();
+    
+    containerBuilder.RegisterType<StudentMetricService>()
+        .As<IStudentMetricService>()
+        .InstancePerLifetimeScope();
+    
+    containerBuilder.RegisterType<StudentSubjectMetricService>()
+        .As<IStudentSubjectMetricService>()
+        .InstancePerLifetimeScope();
+    
+    containerBuilder.RegisterType<DailyLogService>()
+        .As<IDailyLogService>()
+        .InstancePerLifetimeScope();
+    
     // Register generic repository
     containerBuilder.RegisterGeneric(typeof(Repository<>))
         .As(typeof(IRepository<>))

@@ -59,13 +59,18 @@
 
                             <div class="d-flex justify-content-between">
                                 <a href="/Students" class="btn btn-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
-                                    @if (isLoading)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    }
-                                    Update Student
-                                </button>
+                                <div>
+                                    <a href="/Students/@StudentId/Metrics" class="btn btn-outline-info me-2">
+                                        <span class="bi bi-graph-up-arrow"></span> Configure Metrics
+                                    </a>
+                                    <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                        @if (isLoading)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        }
+                                        Update Student
+                                    </button>
+                                </div>
                             </div>
                         </EditForm>
                     }
