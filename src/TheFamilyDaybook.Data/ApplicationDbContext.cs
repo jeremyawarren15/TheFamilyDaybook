@@ -14,6 +14,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Family> Families { get; set; }
     public DbSet<Student> Students { get; set; }
+    public DbSet<Subject> Subjects { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +34,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Student>()
             .HasOne(s => s.Family)
             .WithMany(f => f.Students)
+            .HasForeignKey(s => s.FamilyId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure Family-Subject relationship
+        // When a Family is deleted, cascade delete all Subjects
+        modelBuilder.Entity<Subject>()
+            .HasOne(s => s.Family)
+            .WithMany(f => f.Subjects)
             .HasForeignKey(s => s.FamilyId)
             .OnDelete(DeleteBehavior.Cascade);
     }

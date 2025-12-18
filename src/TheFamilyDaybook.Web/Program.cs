@@ -105,6 +105,10 @@ builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
         .As<IStudentService>()
         .InstancePerLifetimeScope();
     
+    containerBuilder.RegisterType<SubjectService>()
+        .As<ISubjectService>()
+        .InstancePerLifetimeScope();
+    
     // Register generic repository
     containerBuilder.RegisterGeneric(typeof(Repository<>))
         .As(typeof(IRepository<>))

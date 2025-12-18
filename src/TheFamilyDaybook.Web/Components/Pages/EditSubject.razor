@@ -1,0 +1,162 @@
+@page "/Subjects/Edit/{SubjectId:int}"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@using TheFamilyDaybook.Web.ViewModels
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject ISubjectService SubjectService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Edit Subject</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Edit Subject</h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @ErrorMessage
+                        </div>
+                    }
+
+                    @if (subject != null)
+                    {
+                        <EditForm Model="@subjectModel" OnValidSubmit="@HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                                <InputText id="name" class="form-control" @bind-Value="subjectModel.Name" />
+                                <ValidationMessage For="@(() => subjectModel.Name)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <InputTextArea id="description" class="form-control" rows="4" @bind-Value="subjectModel.Description" />
+                                <ValidationMessage For="@(() => subjectModel.Description)" />
+                                <small class="form-text text-muted">Optional description of this subject.</small>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="/Subjects" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                    @if (isLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    Update Subject
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                    else if (isLoading)
+                    {
+                        <p>Loading...</p>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <p>Subject not found.</p>
+                        </div>
+                        <a href="/Subjects" class="btn btn-secondary">Back to Subjects</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int SubjectId { get; set; }
+
+    private ApplicationUser? currentUser;
+    private Subject? subject;
+    private SubjectModel subjectModel = new();
+    private string? ErrorMessage;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                // Load family if exists using DbContext
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser != null)
+                {
+                    // Load subject
+                    subject = await SubjectService.GetSubjectByIdAsync(SubjectId);
+
+                    // Verify subject belongs to user's family
+                    if (subject != null && currentUser.FamilyId.HasValue && subject.FamilyId != currentUser.FamilyId.Value)
+                    {
+                        subject = null;
+                        ErrorMessage = "You do not have permission to edit this subject.";
+                    }
+                    else if (subject != null)
+                    {
+                        subjectModel.Name = subject.Name;
+                        subjectModel.Description = subject.Description;
+                    }
+                    else
+                    {
+                        ErrorMessage = "Subject not found.";
+                    }
+                }
+                else
+                {
+                    ErrorMessage = "User not found.";
+                }
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (subject == null)
+        {
+            ErrorMessage = "Subject not found.";
+            return;
+        }
+
+        ErrorMessage = null;
+        isLoading = true;
+
+        var result = await SubjectService.UpdateSubjectAsync(subject.Id, subjectModel);
+
+        if (result.Succeeded)
+        {
+            NavigationManager.NavigateTo("/Subjects");
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+            isLoading = false;
+        }
+    }
+}
+

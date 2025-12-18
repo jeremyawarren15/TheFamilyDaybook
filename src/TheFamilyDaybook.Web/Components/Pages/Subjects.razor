@@ -1,0 +1,177 @@
+@page "/Subjects"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject ISubjectService SubjectService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Subjects</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Subjects</h1>
+                <a href="/Subjects/Add" class="btn btn-primary">
+                    <span class="bi bi-plus-circle"></span> Add Subject
+                </a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @ErrorMessage
+                </div>
+            }
+
+            @if (subjects != null && subjects.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var subject in subjects)
+                            {
+                                <tr>
+                                    <td>@subject.Name</td>
+                                    <td>@(string.IsNullOrWhiteSpace(subject.Description) ? "—" : (subject.Description.Length > 100 ? subject.Description[..100] + "..." : subject.Description))</td>
+                                    <td>
+                                        <a href="/Subjects/Edit/@subject.Id" class="btn btn-sm btn-outline-primary me-2">
+                                            <span class="bi bi-pencil"></span> Edit
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmation(subject)">
+                                            <span class="bi bi-trash"></span> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (subjects != null)
+            {
+                <div class="alert alert-info" role="alert">
+                    <p>No subjects found. <a href="/Subjects/Add">Add your first subject</a> to get started.</p>
+                </div>
+            }
+            else
+            {
+                <p>Loading...</p>
+            }
+        </div>
+    </div>
+</div>
+
+@if (subjectToDelete != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>@subjectToDelete.Name</strong>? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<Subject>? subjects;
+    private ApplicationUser? currentUser;
+    private Subject? subjectToDelete;
+    private string? ErrorMessage;
+    private bool isDeleting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null && currentUser.FamilyId.HasValue)
+            {
+                // Load family if exists using DbContext
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser?.FamilyId != null)
+                {
+                    subjects = (await SubjectService.GetSubjectsByFamilyIdAsync(currentUser.FamilyId.Value)).ToList();
+                }
+            }
+        }
+    }
+
+    private void ShowDeleteConfirmation(Subject subject)
+    {
+        subjectToDelete = subject;
+    }
+
+    private void CancelDelete()
+    {
+        subjectToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (subjectToDelete == null)
+            return;
+
+        isDeleting = true;
+        ErrorMessage = null;
+
+        var result = await SubjectService.DeleteSubjectAsync(subjectToDelete.Id);
+
+        if (result.Succeeded)
+        {
+            // Refresh the list
+            if (currentUser?.FamilyId != null)
+            {
+                subjects = (await SubjectService.GetSubjectsByFamilyIdAsync(currentUser.FamilyId.Value)).ToList();
+            }
+            subjectToDelete = null;
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+        }
+
+        isDeleting = false;
+    }
+}
+
