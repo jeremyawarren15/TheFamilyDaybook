@@ -38,13 +38,13 @@ The Family Daybook is a Blazor web application designed to help homeschool paren
 - [x] Associate students with parent/user accounts
 
 ### 1.4 Subject Management
-- [ ] Create Subject model (Name, Description, etc.)
-- [ ] Subject CRUD operations
-- [ ] Subject list page/view
-- [ ] Add subject form
-- [ ] Edit subject form
-- [ ] All subjects are custom (no predefined list)
-- [ ] Subjects can be shared across all children in a family
+- [X] Create Subject model (Name, Description, etc.)
+- [X] Subject CRUD operations
+- [X] Subject list page/view
+- [X] Add subject form
+- [X] Edit subject form
+- [X] All subjects are custom (no predefined list)
+- [X] Subjects can be shared across all children in a family
 
 ### 1.5 Basic Daily Log (MVP)
 - [ ] Create DailyLog model (Date, StudentId, Notes, etc.)
