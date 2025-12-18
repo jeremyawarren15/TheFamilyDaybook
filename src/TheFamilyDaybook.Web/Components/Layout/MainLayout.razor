@@ -1,23 +1,69 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+<div class="flex h-screen bg-creamy">
+    <!-- Mobile Menu Button -->
+    <button id="mobile-menu-button" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-sm text-gray-700 hover:bg-gray-50">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+    </button>
+
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-40" onclick="toggleMobileMenu()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static z-50">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto w-full lg:w-auto">
+        <div class="p-4 sm:p-6">
             @Body
-        </article>
+        </div>
     </main>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+<div id="blazor-error-ui" data-nosnippet class="hidden fixed bottom-0 left-0 right-0 bg-yellow-100 border-t-2 border-yellow-400 p-4 z-50 shadow-lg">
+    <div class="flex items-center justify-between max-w-7xl mx-auto">
+        <span class="text-yellow-800 text-sm sm:text-base">An unhandled error has occurred.</span>
+        <div class="flex items-center space-x-4">
+            <a href="." class="text-burgundy hover:text-burgundy-dark font-medium text-sm sm:text-base">Reload</a>
+            <button onclick="document.getElementById('blazor-error-ui').classList.add('hidden')" class="text-yellow-800 hover:text-yellow-900 font-bold text-xl">×</button>
+        </div>
+    </div>
 </div>
+
+<script>
+    function toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobile-overlay');
+        if (sidebar && overlay) {
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+            if (isOpen) {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            } else {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const menuButton = document.getElementById('mobile-menu-button');
+        if (menuButton) {
+            menuButton.addEventListener('click', toggleMobileMenu);
+        }
+        
+        // Close menu when clicking on a nav link on mobile
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 1024) {
+                    toggleMobileMenu();
+                }
+            });
+        });
+    });
+</script>

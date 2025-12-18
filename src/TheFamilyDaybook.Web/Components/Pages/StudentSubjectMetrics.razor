@@ -19,127 +19,129 @@
 
 <PageTitle>Configure Metrics - @(student?.Name ?? "Student") - @(subject?.Name ?? "Subject")</PageTitle>
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1>Configure Metrics</h1>
-                    <p class="text-muted mb-0">Student: <strong>@(student?.Name ?? "")</strong> | Subject: <strong>@(subject?.Name ?? "")</strong></p>
-                </div>
-                <a href="/Students/@StudentId/Metrics" class="btn btn-secondary">
-                    <span class="bi bi-arrow-left"></span> Back to Student Metrics
-                </a>
-            </div>
-
-            @if (!string.IsNullOrEmpty(ErrorMessage))
-            {
-                <div class="alert alert-danger" role="alert">
-                    @ErrorMessage
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(SuccessMessage))
-            {
-                <div class="alert alert-success" role="alert">
-                    @SuccessMessage
-                </div>
-            }
-
-            @if (student != null && subject != null && metricConfigs != null)
-            {
-                <div class="card">
-                    <div class="card-body">
-                        <p class="text-muted">
-                            Configure which metrics apply to this student for this specific subject. 
-                            Metrics marked with <span class="badge bg-info">All Subjects</span> are enabled for all subjects by default and can be overridden here.
-                        </p>
-
-                        <EditForm Model="@configForm" OnValidSubmit="@HandleSubmit">
-                            @if (metricConfigs.Any())
-                            {
-                                var groupedConfigs = metricConfigs.GroupBy(c => c.Category ?? "Other").OrderBy(g => g.Key);
-                                
-                                @foreach (var group in groupedConfigs)
-                                {
-                                    <div class="mb-4">
-                                        <h5>@group.Key</h5>
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="width: 40%;">Metric</th>
-                                                        <th style="width: 15%;">Type</th>
-                                                        <th style="width: 20%;">Scope</th>
-                                                        <th style="width: 25%;">Enabled</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach (var config in group.OrderBy(c => c.MetricName))
-                                                    {
-                                                        var index = metricConfigs.IndexOf(config);
-                                                        <tr>
-                                                            <td>@config.MetricName</td>
-                                                            <td>@config.MetricType</td>
-                                                            <td>
-                                                                @if (config.AppliesToAllSubjects)
-                                                                {
-                                                                    <span class="badge bg-info">All Subjects</span>
-                                                                }
-                                                                else
-                                                                {
-                                                                    <span class="badge bg-secondary">Per Subject</span>
-                                                                }
-                                                            </td>
-                                                            <td>
-                                                                <div class="form-check">
-                                                                    <input class="form-check-input" type="checkbox" 
-                                                                           checked="@config.IsEnabled"
-                                                                           @onchange="@((ChangeEventArgs e) => UpdateConfigEnabled(index, e.Value?.ToString() == "True"))" />
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    }
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <div class="alert alert-info" role="alert">
-                                    <p>No metrics available for this student. <a href="/Students/@StudentId/Metrics">Configure metrics</a> at the student level first.</p>
-                                </div>
-                            }
-
-                            <div class="d-flex justify-content-between mt-4">
-                                <a href="/Students/@StudentId/Metrics" class="btn btn-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
-                                    @if (isLoading)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    }
-                                    Save Configuration
-                                </button>
-                            </div>
-                        </EditForm>
-                    </div>
-                </div>
-            }
-            else if (isLoading)
-            {
-                <p>Loading...</p>
-            }
-            else
-            {
-                <div class="alert alert-danger" role="alert">
-                    <p>Student or subject not found.</p>
-                </div>
-                <a href="/Students" class="btn btn-secondary">Back to Students</a>
-            }
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Configure Metrics</h1>
+            <p class="text-gray-600 mt-1">Student: <strong>@(student?.Name ?? "")</strong> | Subject: <strong>@(subject?.Name ?? "")</strong></p>
         </div>
+        <a href="/Students/@StudentId/Metrics" class="btn-secondary">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Student Metrics
+        </a>
     </div>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger mb-6" role="alert">
+            @ErrorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(SuccessMessage))
+    {
+        <div class="alert alert-success mb-6" role="alert">
+            @SuccessMessage
+        </div>
+    }
+
+    @if (student != null && subject != null && metricConfigs != null)
+    {
+        <div class="card">
+            <div class="card-body">
+                <p class="text-gray-600 mb-4">
+                    Configure which metrics apply to this student for this specific subject. 
+                    Metrics marked with <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">All Subjects</span> are enabled for all subjects by default and can be overridden here.
+                </p>
+
+                <EditForm Model="@configForm" OnValidSubmit="@HandleSubmit">
+                    @if (metricConfigs.Any())
+                    {
+                        var groupedConfigs = metricConfigs.GroupBy(c => c.Category ?? "Other").OrderBy(g => g.Key);
+                        
+                        @foreach (var group in groupedConfigs)
+                        {
+                            <div class="mb-6">
+                                <h5 class="text-lg font-semibold text-gray-900 mb-3">@group.Key</h5>
+                                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                    <div class="overflow-x-auto">
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="w-[40%]">Metric</th>
+                                                    <th class="w-[15%]">Type</th>
+                                                    <th class="w-[20%]">Scope</th>
+                                                    <th class="w-[25%]">Enabled</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var config in group.OrderBy(c => c.MetricName))
+                                                {
+                                                    var index = metricConfigs.IndexOf(config);
+                                                    <tr>
+                                                        <td class="font-medium">@config.MetricName</td>
+                                                        <td>@config.MetricType</td>
+                                                        <td>
+                                                            @if (config.AppliesToAllSubjects)
+                                                            {
+                                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">All Subjects</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Per Subject</span>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            <div class="flex items-center">
+                                                                <input type="checkbox" 
+                                                                       class="w-4 h-4 text-burgundy bg-gray-100 border-gray-300 rounded focus:ring-burgundy focus:ring-2"
+                                                                       checked="@config.IsEnabled"
+                                                                       @onchange="@((ChangeEventArgs e) => UpdateConfigEnabled(index, e.Value?.ToString() == "True"))" />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <p>No metrics available for this student. <a href="/Students/@StudentId/Metrics" class="font-medium underline">Configure metrics</a> at the student level first.</p>
+                        </div>
+                    }
+
+                    <div class="flex justify-between mt-6">
+                        <a href="/Students/@StudentId/Metrics" class="btn-secondary">Cancel</a>
+                        <button type="submit" class="btn-primary" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner spinner-sm inline-block mr-2"></span>
+                            }
+                            Save Configuration
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+    else if (isLoading)
+    {
+        <p class="text-gray-600">Loading...</p>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <p>Student or subject not found.</p>
+        </div>
+        <a href="/Students" class="btn-secondary">Back to Students</a>
+    }
 </div>
 
 @code {
@@ -236,4 +238,3 @@
         isLoading = false;
     }
 }
-

@@ -17,71 +17,67 @@
 
 <PageTitle>Add Student</PageTitle>
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Add Student</h3>
+<div class="max-w-2xl mx-auto px-4 sm:px-0">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="text-base sm:text-lg font-semibold text-gray-900">Add Student</h3>
+        </div>
+        <div class="card-body">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger mb-6" role="alert">
+                    @ErrorMessage
                 </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(ErrorMessage))
-                    {
-                        <div class="alert alert-danger" role="alert">
-                            @ErrorMessage
-                        </div>
-                    }
+            }
 
-                    @if (currentUser != null && currentUser.FamilyId.HasValue)
-                    {
-                        <EditForm Model="@studentModel" OnValidSubmit="@HandleSubmit">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary class="text-danger" />
+            @if (currentUser != null && currentUser.FamilyId.HasValue)
+            {
+                <EditForm Model="@studentModel" OnValidSubmit="@HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-red-600 mb-4" />
 
-                            <div class="mb-3">
-                                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                                <InputText id="name" class="form-control" @bind-Value="studentModel.Name" />
-                                <ValidationMessage For="@(() => studentModel.Name)" />
-                            </div>
+                    <div class="mb-4">
+                        <label for="name" class="form-label">Name <span class="text-red-600">*</span></label>
+                        <InputText id="name" class="form-input" @bind-Value="studentModel.Name" />
+                        <ValidationMessage For="@(() => studentModel.Name)" />
+                    </div>
 
-                            <div class="mb-3">
-                                <label for="dateOfBirth" class="form-label">Date of Birth</label>
-                                <InputDate id="dateOfBirth" class="form-control" @bind-Value="studentModel.DateOfBirth" />
-                                <ValidationMessage For="@(() => studentModel.DateOfBirth)" />
-                            </div>
+                    <div class="mb-4">
+                        <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                        <InputDate id="dateOfBirth" class="form-input" @bind-Value="studentModel.DateOfBirth" />
+                        <ValidationMessage For="@(() => studentModel.DateOfBirth)" />
+                    </div>
 
-                            <div class="mb-3">
-                                <label for="notes" class="form-label">Notes</label>
-                                <InputTextArea id="notes" class="form-control" rows="4" @bind-Value="studentModel.Notes" />
-                                <ValidationMessage For="@(() => studentModel.Notes)" />
-                                <small class="form-text text-muted">Optional notes about this student.</small>
-                            </div>
+                    <div class="mb-6">
+                        <label for="notes" class="form-label">Notes</label>
+                        <InputTextArea id="notes" class="form-input" rows="4" @bind-Value="studentModel.Notes" />
+                        <ValidationMessage For="@(() => studentModel.Notes)" />
+                        <small class="text-gray-500 text-sm mt-1 block">Optional notes about this student.</small>
+                    </div>
 
-                            <div class="d-flex justify-content-between">
-                                <a href="/Students" class="btn btn-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
-                                    @if (isLoading)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    }
-                                    Add Student
-                                </button>
-                            </div>
-                        </EditForm>
-                    }
-                    else if (currentUser != null)
-                    {
-                        <div class="alert alert-warning" role="alert">
-                            <p>You must be associated with a family to add students. Please contact support if you need assistance.</p>
-                        </div>
-                        <a href="/Students" class="btn btn-secondary">Back to Students</a>
-                    }
-                    else
-                    {
-                        <p>Loading...</p>
-                    }
+                    <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
+                        <a href="/Students" class="btn-secondary text-center sm:text-left">Cancel</a>
+                        <button type="submit" class="btn-primary w-full sm:w-auto" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner spinner-sm inline-block mr-2"></span>
+                            }
+                            Add Student
+                        </button>
+                    </div>
+                </EditForm>
+            }
+            else if (currentUser != null)
+            {
+                <div class="alert bg-yellow-50 text-yellow-800 border border-yellow-200 mb-6">
+                    <p>You must be associated with a family to add students. Please contact support if you need assistance.</p>
                 </div>
-            </div>
+                <a href="/Students" class="btn-secondary">Back to Students</a>
+            }
+            else
+            {
+                <p class="text-gray-600">Loading...</p>
+            }
         </div>
     </div>
 </div>
@@ -135,4 +131,3 @@
         }
     }
 }
-

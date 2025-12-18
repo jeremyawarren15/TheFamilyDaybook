@@ -5,69 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - The Family Daybook</title>
     <base href="~/" />
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/app.css" />
     <link rel="icon" type="image/png" href="~/favicon.png" />
 </head>
-<body>
-    <div class="page">
-        <div class="sidebar">
-            <div class="top-row ps-3 navbar navbar-dark">
-                <div class="container-fluid">
-                    <a class="navbar-brand" href="/">The Family Daybook</a>
-                </div>
+<body class="bg-creamy">
+    <div class="flex h-screen">
+        <div class="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full lg:static lg:h-screen">
+            <div class="px-6 py-5 border-b border-gray-200">
+                <h1 class="text-xl font-semibold text-gray-900">The Family Daybook</h1>
             </div>
-            <div class="nav-scrollable">
-                <nav class="nav flex-column">
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <div class="nav-item px-3">
-                            <a class="nav-link" href="/">
-                                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-                            </a>
-                        </div>
-                        <div class="nav-item px-3">
-                            <a class="nav-link" href="/Account/Profile">
-                                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Profile
-                            </a>
-                        </div>
-                        <div class="nav-item px-3">
-                            <a class="nav-link" href="/Account/Logout">
-                                <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Logout
-                            </a>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="nav-item px-3">
-                            <a class="nav-link" href="/Account/Login">
-                                <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Login
-                            </a>
-                        </div>
-                        <div class="nav-item px-3">
-                            <a class="nav-link" href="/Account/Register">
-                                <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Register
-                            </a>
-                        </div>
-                    }
-                </nav>
-            </div>
+            <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 transition-colors duration-200 hover:bg-gray-100" href="/">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <span>Home</span>
+                    </a>
+                    <a class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 transition-colors duration-200 hover:bg-gray-100" href="/Account/Profile">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Profile</span>
+                    </a>
+                    <a class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 transition-colors duration-200 hover:bg-gray-100" href="/Account/Logout">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span>Logout</span>
+                    </a>
+                }
+                else
+                {
+                    <a class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 transition-colors duration-200 hover:bg-gray-100" href="/Account/Login">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                        <span>Login</span>
+                    </a>
+                    <a class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 transition-colors duration-200 hover:bg-gray-100" href="/Account/Register">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                        <span>Register</span>
+                    </a>
+                }
+            </nav>
         </div>
 
-        <main>
-            <div class="top-row px-4">
-                <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-            </div>
-
-            <article class="content px-4">
+        <main class="flex-1 overflow-y-auto">
+            <div class="p-6">
                 @RenderBody()
-            </article>
+            </div>
         </main>
     </div>
 
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
-
-

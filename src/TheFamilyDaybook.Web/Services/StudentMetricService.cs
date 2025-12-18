@@ -160,5 +160,40 @@ public class StudentMetricService : IStudentMetricService
             return StudentServiceResult.Failure($"An error occurred: {ex.Message}");
         }
     }
+
+    public async Task<IEnumerable<StudentMetricConfigViewModel>> GetMetricConfigurationsForStudentAsync(int studentId)
+    {
+        using var context = await _dbContextFactory.CreateDbContextAsync();
+
+        var student = await context.Students
+            .Include(s => s.Family)
+            .FirstOrDefaultAsync(s => s.Id == studentId);
+
+        if (student == null)
+        {
+            return Enumerable.Empty<StudentMetricConfigViewModel>();
+        }
+
+        var configs = await GetMetricsForStudentAsync(studentId, student.FamilyId);
+        return configs.Select(c => new StudentMetricConfigViewModel
+        {
+            MetricId = c.MetricId,
+            MetricName = c.MetricName,
+            MetricType = c.MetricType,
+            Category = c.Category,
+            IsEnabled = c.IsEnabled,
+            AppliesTo = c.AppliesToAllSubjects ? "all" : "specific"
+        });
+    }
+
+    public async Task<StudentServiceResult> EnableMetricForStudentAsync(int studentId, int metricId, bool appliesToAllSubjects)
+    {
+        return await UpdateStudentMetricAsync(studentId, metricId, true, appliesToAllSubjects);
+    }
+
+    public async Task<StudentServiceResult> DisableMetricForStudentAsync(int studentId, int metricId)
+    {
+        return await UpdateStudentMetricAsync(studentId, metricId, false, true);
+    }
 }
 

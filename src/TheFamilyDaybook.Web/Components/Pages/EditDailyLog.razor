@@ -18,191 +18,173 @@
 
 <PageTitle>Edit Daily Log</PageTitle>
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Edit Daily Log</h3>
-                    <p class="mb-0 text-muted">Student: <strong>@(dailyLogModel.StudentName)</strong> | Subject: <strong>@(dailyLogModel.SubjectName)</strong></p>
+<div class="max-w-4xl mx-auto px-4 sm:px-0">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="text-base sm:text-lg font-semibold text-gray-900">Edit Daily Log</h3>
+            <p class="text-gray-600 mt-1 text-sm sm:text-base">Student: <strong>@(dailyLogModel.StudentName)</strong> | Subject: <strong>@(dailyLogModel.SubjectName)</strong></p>
+        </div>
+        <div class="card-body">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger mb-6" role="alert">
+                    @ErrorMessage
                 </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(ErrorMessage))
+            }
+
+            @if (dailyLog != null && currentUser?.FamilyId != null)
+            {
+                <EditForm Model="@dailyLogModel" OnValidSubmit="@HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-red-600 mb-4" />
+
+                    <div class="mb-6">
+                        <label for="date" class="form-label">Date <span class="text-red-600">*</span></label>
+                        <InputDate id="date" class="form-input" @bind-Value="dailyLogModel.Date" />
+                        <ValidationMessage For="@(() => dailyLogModel.Date)" />
+                    </div>
+
+                    @if (availableMetrics != null && availableMetrics.Any())
                     {
-                        <div class="alert alert-danger" role="alert">
-                            @ErrorMessage
-                        </div>
-                    }
+                        <div class="border-t border-gray-200 pt-6 mb-6">
+                            <h4 class="text-base sm:text-lg font-semibold text-gray-900 mb-4">Metrics</h4>
 
-                    @if (dailyLog != null && currentUser?.FamilyId != null)
-                    {
-                        <EditForm Model="@dailyLogModel" OnValidSubmit="@HandleSubmit">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary class="text-danger" />
-
-                            <div class="mb-3">
-                                <label for="date" class="form-label">Date <span class="text-danger">*</span></label>
-                                <InputDate id="date" class="form-control" @bind-Value="dailyLogModel.Date" />
-                                <ValidationMessage For="@(() => dailyLogModel.Date)" />
-                            </div>
-
-                            @if (availableMetrics != null && availableMetrics.Any())
+                            @foreach (var metric in availableMetrics)
                             {
-                                <hr />
-                                <h4>Metrics</h4>
-
-                                @foreach (var metric in availableMetrics)
+                                var metricValue = dailyLogModel.MetricValues.FirstOrDefault(mv => mv.MetricId == metric.Id);
+                                if (metricValue == null)
                                 {
-                                    var metricValue = dailyLogModel.MetricValues.FirstOrDefault(mv => mv.MetricId == metric.Id);
-                                    if (metricValue == null)
+                                    metricValue = new MetricValueModel
                                     {
-                                        metricValue = new MetricValueModel
-                                        {
-                                            MetricId = metric.Id,
-                                            MetricName = metric.Name,
-                                            MetricType = metric.MetricType,
-                                            Category = metric.Category,
-                                            PossibleValues = metric.PossibleValues,
-                                            NumericConfig = metric.NumericConfig
-                                        };
-                                        dailyLogModel.MetricValues.Add(metricValue);
-                                    }
-
-                                    <div class="card mb-3">
-                                        <div class="card-body">
-                                            <h6 class="card-title">@metric.Name</h6>
-                                            @if (!string.IsNullOrWhiteSpace(metric.Description))
-                                            {
-                                                <p class="text-muted small">@metric.Description</p>
-                                            }
-
-                                            @if (metric.MetricType == MetricType.Boolean)
-                                            {
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input" type="checkbox" 
-                                                           id="metric_@metric.Id"
-                                                           checked="@metricValue.BooleanValue"
-                                                           @onchange="@((ChangeEventArgs e) => UpdateBooleanValue(metricValue, e.Value?.ToString() == "True"))" />
-                                                    <label class="form-check-label" for="metric_@metric.Id">
-                                                        @(metricValue.BooleanValue == true ? "Yes" : "No")
-                                                    </label>
-                                                </div>
-                                            }
-                                            else if (metric.MetricType == MetricType.Categorical)
-                                            {
-                                                <div class="mb-2">
-                                                    <select class="form-select" 
-                                                            @bind="metricValue.CategoricalValue"
-                                                            @bind:after="StateHasChanged">
-                                                        <option value="">-- Select --</option>
-                                                        @if (!string.IsNullOrWhiteSpace(metric.PossibleValues))
-                                                        {
-                                                            try
-                                                            {
-                                                                var values = JsonSerializer.Deserialize<List<string>>(metric.PossibleValues);
-                                                                @if (values != null)
-                                                                {
-                                                                    @foreach (var value in values)
-                                                                    {
-                                                                        <option value="@value">@value</option>
-                                                                    }
-                                                                }
-                                                            }
-                                                            catch { }
-                                                        }
-                                                    </select>
-                                                </div>
-                                            }
-                                            else if (metric.MetricType == MetricType.Numeric)
-                                            {
-                                                decimal? min = null;
-                                                decimal? max = null;
-                                                string? unit = null;
-
-                                                @if (!string.IsNullOrWhiteSpace(metric.NumericConfig))
-                                                {
-                                                    try
-                                                    {
-                                                        var config = JsonSerializer.Deserialize<Dictionary<string, object>>(metric.NumericConfig);
-                                                        if (config != null)
-                                                        {
-                                                            if (config.ContainsKey("Min") && decimal.TryParse(config["Min"].ToString(), out var minVal))
-                                                                min = minVal;
-                                                            if (config.ContainsKey("Max") && decimal.TryParse(config["Max"].ToString(), out var maxVal))
-                                                                max = maxVal;
-                                                            if (config.ContainsKey("Unit"))
-                                                                unit = config["Unit"].ToString();
-                                                        }
-                                                    }
-                                                    catch { }
-                                                }
-
-                                                <div class="input-group">
-                                                    <InputNumber class="form-control" 
-                                                                 @bind-Value="metricValue.NumericValue"
-                                                                 min="@min"
-                                                                 max="@max" />
-                                                    @if (!string.IsNullOrWhiteSpace(unit))
-                                                    {
-                                                        <span class="input-group-text">@unit</span>
-                                                    }
-                                                </div>
-                                                @if (min.HasValue || max.HasValue)
-                                                {
-                                                    <small class="form-text text-muted">
-                                                        @if (min.HasValue && max.HasValue)
-                                                        {
-                                                            <text>Range: @min - @max</text>
-                                                        }
-                                                        else if (min.HasValue)
-                                                        {
-                                                            <text>Minimum: @min</text>
-                                                        }
-                                                        else if (max.HasValue)
-                                                        {
-                                                            <text>Maximum: @max</text>
-                                                        }
-                                                    </small>
-                                                }
-                                            }
-                                        </div>
-                                    </div>
+                                        MetricId = metric.Id,
+                                        MetricName = metric.Name,
+                                        MetricType = metric.MetricType,
+                                        Category = metric.Category,
+                                        PossibleValues = metric.PossibleValues,
+                                        NumericConfig = metric.NumericConfig
+                                    };
+                                    dailyLogModel.MetricValues.Add(metricValue);
                                 }
+
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <h6 class="font-semibold text-gray-900 mb-1 text-sm sm:text-base">@metric.Name</h6>
+                                        @if (!string.IsNullOrWhiteSpace(metric.Description))
+                                        {
+                                            <p class="text-gray-600 text-sm mb-3">@metric.Description</p>
+                                        }
+
+                                        @if (metric.MetricType == MetricType.Boolean)
+                                        {
+                                            <div class="flex items-center space-x-4">
+                                                <label class="flex items-center cursor-pointer">
+                                                    <input type="radio" name="metric_@metric.Id" value="true" class="w-4 h-4 text-burgundy bg-gray-100 border-gray-300 focus:ring-burgundy focus:ring-2" checked="@(metricValue.BooleanValue == true)" @onchange="@((ChangeEventArgs e) => UpdateBooleanValue(metricValue, e.Value?.ToString() == "true"))" />
+                                                    <span class="ml-2 text-sm text-gray-700">Yes</span>
+                                                </label>
+                                                <label class="flex items-center cursor-pointer">
+                                                    <input type="radio" name="metric_@metric.Id" value="false" class="w-4 h-4 text-burgundy bg-gray-100 border-gray-300 focus:ring-burgundy focus:ring-2" checked="@(metricValue.BooleanValue == false)" @onchange="@((ChangeEventArgs e) => UpdateBooleanValue(metricValue, e.Value?.ToString() == "false"))" />
+                                                    <span class="ml-2 text-sm text-gray-700">No</span>
+                                                </label>
+                                            </div>
+                                        }
+                                        else if (metric.MetricType == MetricType.Categorical)
+                                        {
+                                            List<string>? possibleValues = null;
+                                            if (!string.IsNullOrWhiteSpace(metric.PossibleValues))
+                                            {
+                                                try
+                                                {
+                                                    possibleValues = JsonSerializer.Deserialize<List<string>>(metric.PossibleValues);
+                                                }
+                                                catch { }
+                                            }
+
+                                            if (possibleValues != null && possibleValues.Any())
+                                            {
+                                                <div class="space-y-2">
+                                                    @foreach (var value in possibleValues)
+                                                    {
+                                                        <label class="flex items-center cursor-pointer">
+                                                            <input type="radio" name="metric_@metric.Id" value="@value" class="w-4 h-4 text-burgundy bg-gray-100 border-gray-300 focus:ring-burgundy focus:ring-2" checked="@(metricValue.CategoricalValue == value)" @onchange="@((ChangeEventArgs e) => UpdateCategoricalValue(metricValue, e.Value?.ToString()))" />
+                                                            <span class="ml-2 text-sm text-gray-700">@value</span>
+                                                        </label>
+                                                    }
+                                                </div>
+                                            }
+                                        }
+                                        else if (metric.MetricType == MetricType.Numeric)
+                                        {
+                                            Dictionary<string, object>? numericConfig = null;
+                                            if (!string.IsNullOrWhiteSpace(metric.NumericConfig))
+                                            {
+                                                try
+                                                {
+                                                    numericConfig = JsonSerializer.Deserialize<Dictionary<string, object>>(metric.NumericConfig);
+                                                }
+                                                catch { }
+                                            }
+
+                                            <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                                                <InputNumber class="form-input flex-1" @bind-Value="metricValue.NumericValue" placeholder="Enter value" />
+                                                @if (numericConfig != null && numericConfig.ContainsKey("Unit"))
+                                                {
+                                                    <span class="text-sm text-gray-600">@numericConfig["Unit"]</span>
+                                                }
+                                            </div>
+                                            @if (numericConfig != null)
+                                            {
+                                                <small class="text-gray-500 text-xs mt-1 block">
+                                                    @if (numericConfig.ContainsKey("Min") && numericConfig.ContainsKey("Max"))
+                                                    {
+                                                        <text>Range: @numericConfig["Min"] - @numericConfig["Max"]</text>
+                                                    }
+                                                    else if (numericConfig.ContainsKey("Min"))
+                                                    {
+                                                        <text>Minimum: @numericConfig["Min"]</text>
+                                                    }
+                                                    else if (numericConfig.ContainsKey("Max"))
+                                                    {
+                                                        <text>Maximum: @numericConfig["Max"]</text>
+                                                    }
+                                                </small>
+                                            }
+                                        }
+                                    </div>
+                                </div>
                             }
-
-                            <hr />
-
-                            <div class="mb-3">
-                                <label for="notes" class="form-label">Notes</label>
-                                <InputTextArea id="notes" class="form-control" rows="4" @bind-Value="dailyLogModel.Notes" />
-                                <ValidationMessage For="@(() => dailyLogModel.Notes)" />
-                            </div>
-
-                            <div class="d-flex justify-content-between">
-                                <a href="/DailyLogs" class="btn btn-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
-                                    @if (isLoading)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    }
-                                    Update Daily Log
-                                </button>
-                            </div>
-                        </EditForm>
-                    }
-                    else if (isLoading)
-                    {
-                        <p>Loading...</p>
-                    }
-                    else
-                    {
-                        <div class="alert alert-danger" role="alert">
-                            <p>Daily log not found.</p>
                         </div>
-                        <a href="/DailyLogs" class="btn btn-secondary">Back to Daily Logs</a>
                     }
+
+                    <div class="mb-6">
+                        <label for="notes" class="form-label">Notes</label>
+                        <InputTextArea id="notes" class="form-input" rows="4" @bind-Value="dailyLogModel.Notes" />
+                        <ValidationMessage For="@(() => dailyLogModel.Notes)" />
+                        <small class="text-gray-500 text-sm mt-1 block">Optional notes about this daily log entry.</small>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
+                        <a href="/DailyLogs" class="btn-secondary text-center sm:text-left">Cancel</a>
+                        <button type="submit" class="btn-primary w-full sm:w-auto" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner spinner-sm inline-block mr-2"></span>
+                            }
+                            Update Daily Log
+                        </button>
+                    </div>
+                </EditForm>
+            }
+            else if (isLoading)
+            {
+                <p class="text-gray-600">Loading...</p>
+            }
+            else
+            {
+                <div class="alert alert-danger mb-6">
+                    <p>Daily log not found.</p>
                 </div>
-            </div>
+                <a href="/DailyLogs" class="btn-secondary">Back to Daily Logs</a>
+            }
         </div>
     </div>
 </div>
@@ -213,8 +195,8 @@
 
     private ApplicationUser? currentUser;
     private DailyLog? dailyLog;
-    private DailyLogModel dailyLogModel = new();
     private List<Metric>? availableMetrics;
+    private DailyLogModel dailyLogModel = new();
     private string? ErrorMessage;
     private bool isLoading = false;
 
@@ -237,60 +219,65 @@
                 {
                     dailyLog = await DailyLogService.GetDailyLogByIdAsync(DailyLogId);
 
-                    if (dailyLog != null && currentUser.FamilyId.HasValue && dailyLog.Student.FamilyId != currentUser.FamilyId.Value)
+                    if (dailyLog != null && currentUser.FamilyId.HasValue)
                     {
-                        dailyLog = null;
-                    }
-                    else if (dailyLog != null && currentUser.FamilyId.HasValue)
-                    {
-                        dailyLogModel.Id = dailyLog.Id;
-                        dailyLogModel.StudentId = dailyLog.StudentId;
-                        dailyLogModel.StudentName = dailyLog.Student.Name;
-                        dailyLogModel.SubjectId = dailyLog.SubjectId;
-                        dailyLogModel.SubjectName = dailyLog.Subject.Name;
-                        dailyLogModel.Date = dailyLog.Date;
-                        dailyLogModel.Notes = dailyLog.Notes;
-
-                        // Load available metrics
-                        availableMetrics = (await DailyLogService.GetAvailableMetricsForDailyLogAsync(dailyLog.StudentId, dailyLog.SubjectId, currentUser.FamilyId.Value)).ToList();
-
-                        // Load existing metric values
-                        foreach (var metricValue in dailyLog.MetricValues)
+                        if (dailyLog.Student.FamilyId != currentUser.FamilyId.Value)
                         {
-                            var metric = availableMetrics.FirstOrDefault(m => m.Id == metricValue.MetricId);
-                            if (metric != null)
-                            {
-                                var model = new MetricValueModel
-                                {
-                                    MetricId = metricValue.MetricId,
-                                    MetricName = metric.Name,
-                                    MetricType = metric.MetricType,
-                                    Category = metric.Category,
-                                    BooleanValue = metricValue.BooleanValue,
-                                    CategoricalValue = metricValue.CategoricalValue,
-                                    NumericValue = metricValue.NumericValue,
-                                    PossibleValues = metric.PossibleValues,
-                                    NumericConfig = metric.NumericConfig
-                                };
-                                dailyLogModel.MetricValues.Add(model);
-                            }
+                            dailyLog = null;
+                            ErrorMessage = "You do not have permission to edit this daily log.";
                         }
-
-                        // Add metrics that don't have values yet
-                        foreach (var metric in availableMetrics)
+                        else
                         {
-                            if (!dailyLogModel.MetricValues.Any(mv => mv.MetricId == metric.Id))
+                            dailyLogModel.Id = dailyLog.Id;
+                            dailyLogModel.Date = dailyLog.Date;
+                            dailyLogModel.StudentId = dailyLog.StudentId;
+                            dailyLogModel.SubjectId = dailyLog.SubjectId;
+                            dailyLogModel.StudentName = dailyLog.Student.Name;
+                            dailyLogModel.SubjectName = dailyLog.Subject.Name;
+                            dailyLogModel.Notes = dailyLog.Notes ?? string.Empty;
+
+                            // Load existing metric values
+                            foreach (var value in dailyLog.MetricValues)
                             {
-                                var model = new MetricValueModel
+                                var metricValue = new MetricValueModel
                                 {
-                                    MetricId = metric.Id,
-                                    MetricName = metric.Name,
-                                    MetricType = metric.MetricType,
-                                    Category = metric.Category,
-                                    PossibleValues = metric.PossibleValues,
-                                    NumericConfig = metric.NumericConfig
+                                    MetricId = value.MetricId,
+                                    BooleanValue = value.BooleanValue,
+                                    CategoricalValue = value.CategoricalValue,
+                                    NumericValue = value.NumericValue
                                 };
-                                dailyLogModel.MetricValues.Add(model);
+                                dailyLogModel.MetricValues.Add(metricValue);
+                            }
+
+                            // Load available metrics
+                            var metrics = await DailyLogService.GetAvailableMetricsForDailyLogAsync(dailyLog.StudentId, dailyLog.SubjectId, currentUser.FamilyId.Value);
+                            availableMetrics = metrics.ToList();
+
+                            // Ensure all metrics have values in the model
+                            foreach (var metric in availableMetrics)
+                            {
+                                if (!dailyLogModel.MetricValues.Any(mv => mv.MetricId == metric.Id))
+                                {
+                                    var metricValue = new MetricValueModel
+                                    {
+                                        MetricId = metric.Id,
+                                        MetricName = metric.Name,
+                                        MetricType = metric.MetricType,
+                                        Category = metric.Category,
+                                        PossibleValues = metric.PossibleValues,
+                                        NumericConfig = metric.NumericConfig
+                                    };
+                                    dailyLogModel.MetricValues.Add(metricValue);
+                                }
+                                else
+                                {
+                                    var existingValue = dailyLogModel.MetricValues.First(mv => mv.MetricId == metric.Id);
+                                    existingValue.MetricName = metric.Name;
+                                    existingValue.MetricType = metric.MetricType;
+                                    existingValue.Category = metric.Category;
+                                    existingValue.PossibleValues = metric.PossibleValues;
+                                    existingValue.NumericConfig = metric.NumericConfig;
+                                }
                             }
                         }
                     }
@@ -304,9 +291,14 @@
         metricValue.BooleanValue = value;
     }
 
+    private void UpdateCategoricalValue(MetricValueModel metricValue, string? value)
+    {
+        metricValue.CategoricalValue = value;
+    }
+
     private async Task HandleSubmit()
     {
-        if (dailyLog == null)
+        if (dailyLog == null || currentUser?.FamilyId == null)
         {
             ErrorMessage = "Daily log not found.";
             return;
@@ -315,18 +307,11 @@
         ErrorMessage = null;
         isLoading = true;
 
-        // Remove metric values that aren't set
-        dailyLogModel.MetricValues = dailyLogModel.MetricValues
-            .Where(mv => mv.BooleanValue.HasValue || 
-                        !string.IsNullOrWhiteSpace(mv.CategoricalValue) || 
-                        mv.NumericValue.HasValue)
-            .ToList();
-
-        var result = await DailyLogService.UpdateDailyLogAsync(DailyLogId, dailyLogModel);
+        var result = await DailyLogService.UpdateDailyLogAsync(dailyLog.Id, dailyLogModel);
 
         if (result.Succeeded)
         {
-            NavigationManager.NavigateTo("/DailyLogs");
+            NavigationManager.NavigateTo($"/DailyLogs");
         }
         else
         {
@@ -335,4 +320,3 @@
         }
     }
 }
-

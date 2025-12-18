@@ -17,85 +17,71 @@
 <CascadingAuthenticationState>
     <AuthorizeView>
         <Authorized>
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="col-12">
-                        <h1>Dashboard</h1>
-                        <p class="lead">Welcome to The Family Daybook</p>
-                    </div>
+            <div class="max-w-7xl mx-auto">
+                <div class="mb-6 sm:mb-8">
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+                    <p class="text-gray-600 text-sm sm:text-base">Welcome to The Family Daybook</p>
                 </div>
 
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>Weekly Goals</h3>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted">Weekly goals feature coming soon. You'll be able to set and track goals for each student and subject here.</p>
-                            </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="text-base sm:text-lg font-semibold text-gray-900">Weekly Goals</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-gray-600 text-sm sm:text-base">Weekly goals feature coming soon. You'll be able to set and track goals for each student and subject here.</p>
                         </div>
                     </div>
 
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>Students</h3>
-                            </div>
-                            <div class="card-body">
-                                @if (students != null && students.Any())
-                                {
-                                    <ul class="list-group list-group-flush">
-                                        @foreach (var student in students)
-                                        {
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                <strong>@student.Name</strong>
-                                                <a href="/DailyLogs/Add/@student.Id" class="btn btn-sm btn-primary">
-                                                    Add daily log
-                                                </a>
-                                            </li>
-                                        }
-                                    </ul>
-                                }
-                                else if (students != null)
-                                {
-                                    <p class="text-muted">No students found. <a href="/Students/Add">Add your first student</a> to get started.</p>
-                                }
-                                else
-                                {
-                                    <p class="text-muted">Loading students...</p>
-                                }
-                            </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="text-base sm:text-lg font-semibold text-gray-900">Students</h3>
+                        </div>
+                        <div class="card-body">
+                            @if (students != null && students.Any())
+                            {
+                                <ul class="divide-y divide-gray-200">
+                                    @foreach (var student in students)
+                                    {
+                                        <li class="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                            <span class="font-medium text-gray-900">@student.Name</span>
+                                            <a href="/DailyLogs/Add/@student.Id" class="btn-primary btn-sm w-full sm:w-auto text-center">
+                                                Add daily log
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else if (students != null)
+                            {
+                                <p class="text-gray-600 text-sm sm:text-base">No students found. <a href="/Students/Add" class="text-burgundy hover:text-burgundy-dark font-medium">Add your first student</a> to get started.</p>
+                            }
+                            else
+                            {
+                                <p class="text-gray-600 text-sm sm:text-base">Loading students...</p>
+                            }
                         </div>
                     </div>
                 </div>
 
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>Today's Daily Logs</h3>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted">Daily log tracking coming soon. You'll be able to create daily logs for each student here.</p>
-                            </div>
-                        </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-900">Today's Daily Logs</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-gray-600 text-sm sm:text-base">Daily log tracking coming soon. You'll be able to create daily logs for each student here.</p>
                     </div>
                 </div>
             </div>
         </Authorized>
         <NotAuthorized>
-            <div class="container mt-5">
-                <div class="row justify-content-center">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>Welcome to The Family Daybook</h3>
-                            </div>
-                            <div class="card-body">
-                                <p>Please <a href="/Account/Login">log in</a> or <a href="/Account/Register">register</a> to get started.</p>
-                            </div>
-                        </div>
+            <div class="max-w-2xl mx-auto mt-8 sm:mt-12 px-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-base sm:text-lg font-semibold text-gray-900">Welcome to The Family Daybook</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-gray-600 text-sm sm:text-base">Please <a href="/Account/Login" class="text-burgundy hover:text-burgundy-dark font-medium">log in</a> or <a href="/Account/Register" class="text-burgundy hover:text-burgundy-dark font-medium">register</a> to get started.</p>
                     </div>
                 </div>
             </div>

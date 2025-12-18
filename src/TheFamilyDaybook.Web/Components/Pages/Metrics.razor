@@ -16,123 +16,193 @@
 
 <PageTitle>Metrics</PageTitle>
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Metrics</h1>
-                <a href="/Metrics/Add" class="btn btn-primary">
-                    <span class="bi bi-plus-circle"></span> Add Custom Metric
-                </a>
-            </div>
-
-            @if (!string.IsNullOrEmpty(ErrorMessage))
-            {
-                <div class="alert alert-danger" role="alert">
-                    @ErrorMessage
-                </div>
-            }
-
-            @if (metrics != null)
-            {
-                @if (templateMetrics.Any())
-                {
-                    <h3 class="mt-4 mb-3">Template Metrics</h3>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Type</th>
-                                    <th>Category</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var metric in templateMetrics)
-                                {
-                                    <tr>
-                                        <td>@metric.Name</td>
-                                        <td>@metric.MetricType</td>
-                                        <td>@(metric.Category ?? "—")</td>
-                                        <td>@(string.IsNullOrWhiteSpace(metric.Description) ? "—" : (metric.Description.Length > 100 ? metric.Description[..100] + "..." : metric.Description))</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-
-                @if (customMetrics.Any())
-                {
-                    <h3 class="mt-4 mb-3">Custom Metrics</h3>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Type</th>
-                                    <th>Category</th>
-                                    <th>Description</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var metric in customMetrics)
-                                {
-                                    <tr>
-                                        <td>@metric.Name</td>
-                                        <td>@metric.MetricType</td>
-                                        <td>@(metric.Category ?? "—")</td>
-                                        <td>@(string.IsNullOrWhiteSpace(metric.Description) ? "—" : (metric.Description.Length > 100 ? metric.Description[..100] + "..." : metric.Description))</td>
-                                        <td>
-                                            <a href="/Metrics/Edit/@metric.Id" class="btn btn-sm btn-outline-primary me-2">
-                                                <span class="bi bi-pencil"></span> Edit
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmation(metric)">
-                                                <span class="bi bi-trash"></span> Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-
-                @if (!templateMetrics.Any() && !customMetrics.Any())
-                {
-                    <div class="alert alert-info" role="alert">
-                        <p>No metrics found. <a href="/Metrics/Add">Add your first custom metric</a> to get started.</p>
-                    </div>
-                }
-            }
-            else
-            {
-                <p>Loading...</p>
-            }
-        </div>
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Metrics</h1>
+        <a href="/Metrics/Add" class="btn-primary w-full sm:w-auto">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Custom Metric
+        </a>
     </div>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger mb-6" role="alert">
+            @ErrorMessage
+        </div>
+    }
+
+    @if (metrics != null)
+    {
+        @if (templateMetrics.Any())
+        {
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mt-6 mb-3">Template Metrics</h3>
+            <!-- Desktop Table View -->
+            <div class="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+                <div class="overflow-x-auto">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var metric in templateMetrics)
+                            {
+                                <tr>
+                                    <td class="font-medium">@metric.Name</td>
+                                    <td>@metric.MetricType</td>
+                                    <td>@(metric.Category ?? "—")</td>
+                                    <td>@(string.IsNullOrWhiteSpace(metric.Description) ? "—" : (metric.Description.Length > 100 ? metric.Description[..100] + "..." : metric.Description))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Mobile Card View -->
+            <div class="md:hidden space-y-3 mb-6">
+                @foreach (var metric in templateMetrics)
+                {
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="font-semibold text-gray-900 mb-1">@metric.Name</h4>
+                            <div class="text-sm text-gray-600 space-y-1">
+                                <p><span class="font-medium">Type:</span> @metric.MetricType</p>
+                                <p><span class="font-medium">Category:</span> @(metric.Category ?? "—")</p>
+                                @if (!string.IsNullOrWhiteSpace(metric.Description))
+                                {
+                                    <p class="mt-2">@metric.Description</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (customMetrics.Any())
+        {
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mt-6 mb-3">Custom Metrics</h3>
+            <!-- Desktop Table View -->
+            <div class="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+                <div class="overflow-x-auto">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var metric in customMetrics)
+                            {
+                                <tr>
+                                    <td class="font-medium">@metric.Name</td>
+                                    <td>@metric.MetricType</td>
+                                    <td>@(metric.Category ?? "—")</td>
+                                    <td>@(string.IsNullOrWhiteSpace(metric.Description) ? "—" : (metric.Description.Length > 100 ? metric.Description[..100] + "..." : metric.Description))</td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <a href="/Metrics/Edit/@metric.Id" class="btn-outline btn-sm">
+                                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                                Edit
+                                            </a>
+                                            <button type="button" class="px-3 py-1.5 text-sm border-2 border-red-300 text-red-700 rounded-md font-medium transition-colors duration-200 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" @onclick="() => ShowDeleteConfirmation(metric)">
+                                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Mobile Card View -->
+            <div class="md:hidden space-y-4 mb-6">
+                @foreach (var metric in customMetrics)
+                {
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="font-semibold text-gray-900 mb-2">@metric.Name</h4>
+                            <div class="text-sm text-gray-600 space-y-1 mb-4">
+                                <p><span class="font-medium">Type:</span> @metric.MetricType</p>
+                                <p><span class="font-medium">Category:</span> @(metric.Category ?? "—")</p>
+                                @if (!string.IsNullOrWhiteSpace(metric.Description))
+                                {
+                                    <p class="mt-2">@metric.Description</p>
+                                }
+                            </div>
+                            <div class="flex space-x-2">
+                                <a href="/Metrics/Edit/@metric.Id" class="btn-outline btn-sm flex-1 justify-center">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit
+                                </a>
+                                <button type="button" class="px-3 py-1.5 text-sm border-2 border-red-300 text-red-700 rounded-md font-medium transition-colors duration-200 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex-1 justify-center" @onclick="() => ShowDeleteConfirmation(metric)">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (!templateMetrics.Any() && !customMetrics.Any())
+        {
+            <div class="alert alert-info">
+                <p>No metrics found. <a href="/Metrics/Add" class="font-medium underline">Add your first custom metric</a> to get started.</p>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="text-gray-600">Loading...</p>
+    }
 </div>
 
 @if (metricToDelete != null)
 {
-    <div class="modal fade show" style="display: block;" tabindex="-1">
+    <div class="modal">
+        <div class="modal-backdrop" @onclick="CancelDelete"></div>
         <div class="modal-dialog">
-            <div class="modal-content">
+            <div class="modal-content max-w-md mx-4">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirm Delete</h5>
-                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                    <h5 class="text-lg font-semibold text-gray-900">Confirm Delete</h5>
+                    <button type="button" class="text-gray-400 hover:text-gray-600" @onclick="CancelDelete">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete <strong>@metricToDelete.Name</strong>? This action cannot be undone.</p>
+                    <p class="text-gray-700">Are you sure you want to delete <strong>@metricToDelete.Name</strong>? This action cannot be undone.</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
-                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+                <div class="modal-footer flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button type="button" class="btn-secondary w-full sm:w-auto" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="bg-red-600 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 w-full sm:w-auto" @onclick="ConfirmDelete" disabled="@isDeleting">
                         @if (isDeleting)
                         {
-                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span class="spinner spinner-sm inline-block mr-2"></span>
                         }
                         Delete
                     </button>
@@ -140,7 +210,6 @@
             </div>
         </div>
     </div>
-    <div class="modal-backdrop fade show"></div>
 }
 
 @code {
@@ -215,4 +284,3 @@
         isDeleting = false;
     }
 }
-

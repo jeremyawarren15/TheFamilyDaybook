@@ -17,65 +17,61 @@
 
 <PageTitle>Edit Subject</PageTitle>
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Edit Subject</h3>
+<div class="max-w-2xl mx-auto px-4 sm:px-0">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="text-base sm:text-lg font-semibold text-gray-900">Edit Subject</h3>
+        </div>
+        <div class="card-body">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger mb-6" role="alert">
+                    @ErrorMessage
                 </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(ErrorMessage))
-                    {
-                        <div class="alert alert-danger" role="alert">
-                            @ErrorMessage
-                        </div>
-                    }
+            }
 
-                    @if (subject != null)
-                    {
-                        <EditForm Model="@subjectModel" OnValidSubmit="@HandleSubmit">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary class="text-danger" />
+            @if (subject != null)
+            {
+                <EditForm Model="@subjectModel" OnValidSubmit="@HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-red-600 mb-4" />
 
-                            <div class="mb-3">
-                                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                                <InputText id="name" class="form-control" @bind-Value="subjectModel.Name" />
-                                <ValidationMessage For="@(() => subjectModel.Name)" />
-                            </div>
+                    <div class="mb-4">
+                        <label for="name" class="form-label">Name <span class="text-red-600">*</span></label>
+                        <InputText id="name" class="form-input" @bind-Value="subjectModel.Name" />
+                        <ValidationMessage For="@(() => subjectModel.Name)" />
+                    </div>
 
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                <InputTextArea id="description" class="form-control" rows="4" @bind-Value="subjectModel.Description" />
-                                <ValidationMessage For="@(() => subjectModel.Description)" />
-                                <small class="form-text text-muted">Optional description of this subject.</small>
-                            </div>
+                    <div class="mb-6">
+                        <label for="description" class="form-label">Description</label>
+                        <InputTextArea id="description" class="form-input" rows="4" @bind-Value="subjectModel.Description" />
+                        <ValidationMessage For="@(() => subjectModel.Description)" />
+                        <small class="text-gray-500 text-sm mt-1 block">Optional description of this subject.</small>
+                    </div>
 
-                            <div class="d-flex justify-content-between">
-                                <a href="/Subjects" class="btn btn-secondary">Cancel</a>
-                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
-                                    @if (isLoading)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    }
-                                    Update Subject
-                                </button>
-                            </div>
-                        </EditForm>
-                    }
-                    else if (isLoading)
-                    {
-                        <p>Loading...</p>
-                    }
-                    else
-                    {
-                        <div class="alert alert-danger" role="alert">
-                            <p>Subject not found.</p>
-                        </div>
-                        <a href="/Subjects" class="btn btn-secondary">Back to Subjects</a>
-                    }
+                    <div class="flex flex-col sm:flex-row sm:justify-between gap-3">
+                        <a href="/Subjects" class="btn-secondary text-center sm:text-left">Cancel</a>
+                        <button type="submit" class="btn-primary w-full sm:w-auto" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner spinner-sm inline-block mr-2"></span>
+                            }
+                            Update Subject
+                        </button>
+                    </div>
+                </EditForm>
+            }
+            else if (isLoading)
+            {
+                <p class="text-gray-600">Loading...</p>
+            }
+            else
+            {
+                <div class="alert alert-danger mb-6">
+                    <p>Subject not found.</p>
                 </div>
-            </div>
+                <a href="/Subjects" class="btn-secondary">Back to Subjects</a>
+            }
         </div>
     </div>
 </div>
@@ -159,4 +155,3 @@
         }
     }
 }
-

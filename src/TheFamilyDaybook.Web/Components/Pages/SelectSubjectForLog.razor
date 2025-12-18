@@ -18,77 +18,73 @@
 
 <PageTitle>Select Subject - @(student?.Name ?? "Student")</PageTitle>
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1>Select Subject</h1>
-                    <p class="text-muted mb-0">Student: <strong>@(student?.Name ?? "")</strong></p>
-                </div>
-                <a href="/Students" class="btn btn-secondary">
-                    <span class="bi bi-arrow-left"></span> Back to Students
-                </a>
-            </div>
-
-            @if (student != null && subjects != null)
-            {
-                @if (subjects.Any())
-                {
-                    <div class="row">
-                        @foreach (var subject in subjects)
-                        {
-                            <div class="col-md-4 mb-3">
-                                <div class="card h-100">
-                                    <div class="card-body d-flex flex-column">
-                                        <h5 class="card-title">@subject.Name</h5>
-                                        @if (!string.IsNullOrWhiteSpace(subject.Description))
-                                        {
-                                            <p class="card-text text-muted">@(subject.Description.Length > 100 ? subject.Description[..100] + "..." : subject.Description)</p>
-                                        }
-                                        <div class="mt-auto">
-                                            @if (existingLogs.ContainsKey(subject.Id) && existingLogs[subject.Id].HasValue)
-                                            {
-                                                <div class="mb-2">
-                                                    <span class="badge bg-success">Log exists for today</span>
-                                                </div>
-                                                <a href="/DailyLogs/Edit/@existingLogs[subject.Id]!.Value" class="btn btn-primary w-100">
-                                                    <span class="bi bi-pencil"></span> Edit Daily Log
-                                                </a>
-                                            }
-                                            else
-                                            {
-                                                <a href="/Students/@StudentId/Subjects/@subject.Id/DailyLog/Add" class="btn btn-primary w-100">
-                                                    <span class="bi bi-plus-circle"></span> Add Daily Log
-                                                </a>
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="alert alert-info" role="alert">
-                        <p>No subjects assigned to this student. <a href="/Subjects">Assign subjects</a> first.</p>
-                    </div>
-                }
-            }
-            else if (isLoading)
-            {
-                <p>Loading...</p>
-            }
-            else
-            {
-                <div class="alert alert-danger" role="alert">
-                    <p>Student not found.</p>
-                </div>
-                <a href="/Students" class="btn btn-secondary">Back to Students</a>
-            }
+<div class="max-w-7xl mx-auto px-4 sm:px-0">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Select Subject</h1>
+            <p class="text-gray-600 mt-1 text-sm sm:text-base">Student: <strong>@(student?.Name ?? "")</strong></p>
         </div>
+        <a href="/Students" class="btn-secondary w-full sm:w-auto">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Students
+        </a>
     </div>
+
+    @if (student != null && subjects != null)
+    {
+        @if (subjects.Any())
+        {
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                @foreach (var subject in subjects)
+                {
+                    <div class="card">
+                        <div class="card-body flex flex-col">
+                            <h5 class="text-base sm:text-lg font-semibold text-gray-900 mb-2">@subject.Name</h5>
+                            @if (!string.IsNullOrWhiteSpace(subject.Description))
+                            {
+                                <p class="text-gray-600 text-sm mb-4 flex-grow">@(subject.Description.Length > 100 ? subject.Description[..100] + "..." : subject.Description)</p>
+                            }
+                            <div class="mt-auto">
+                                @if (existingLogs.ContainsKey(subject.Id) && existingLogs[subject.Id].HasValue)
+                                {
+                                    <div class="mb-3">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Log exists for today</span>
+                                    </div>
+                                    <a href="/DailyLogs/Edit/@existingLogs[subject.Id]!.Value" class="btn-primary w-full text-center">
+                                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit Daily Log
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a href="/Students/@StudentId/Subjects/@subject.Id/DailyLog/Add" class="btn-primary w-full text-center">
+                                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Add Daily Log
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <p>No subjects found for this student. <a href="/Subjects" class="font-medium underline">Add subjects</a> first, then configure them for this student.</p>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="text-gray-600">Loading...</p>
+    }
 </div>
 
 @code {
@@ -98,8 +94,7 @@
     private ApplicationUser? currentUser;
     private Student? student;
     private List<Subject>? subjects;
-    private Dictionary<int, int?> existingLogs = new(); // SubjectId -> DailyLogId (null if no log exists)
-    private bool isLoading = false;
+    private Dictionary<int, int?> existingLogs = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,23 +119,17 @@
                     {
                         student = null;
                     }
-                    else if (student != null)
+                    else if (student != null && currentUser.FamilyId.HasValue)
                     {
-                        subjects = (await StudentSubjectService.GetSubjectsForStudentAsync(StudentId)).ToList();
-                        
-                        // Check for existing logs for today
+                        var studentSubjects = await StudentSubjectService.GetSubjectsForStudentAsync(student.Id);
+                        subjects = studentSubjects.ToList();
+
                         var today = DateTime.Today;
                         foreach (var subject in subjects)
                         {
-                            var existingLog = await DailyLogService.GetDailyLogAsync(StudentId, subject.Id, today);
-                            if (existingLog != null)
-                            {
-                                existingLogs[subject.Id] = existingLog.Id;
-                            }
-                            else
-                            {
-                                existingLogs[subject.Id] = null;
-                            }
+                            var logs = await DailyLogService.GetDailyLogsForStudentSubjectAsync(student.Id, subject.Id);
+                            var todayLog = logs.FirstOrDefault(l => l.Date.Date == today);
+                            existingLogs[subject.Id] = todayLog?.Id;
                         }
                     }
                 }
@@ -148,4 +137,3 @@
         }
     }
 }
-
