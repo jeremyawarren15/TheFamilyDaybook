@@ -1,0 +1,218 @@
+@page "/Metrics"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IMetricService MetricService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Metrics</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Metrics</h1>
+                <a href="/Metrics/Add" class="btn btn-primary">
+                    <span class="bi bi-plus-circle"></span> Add Custom Metric
+                </a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @ErrorMessage
+                </div>
+            }
+
+            @if (metrics != null)
+            {
+                @if (templateMetrics.Any())
+                {
+                    <h3 class="mt-4 mb-3">Template Metrics</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var metric in templateMetrics)
+                                {
+                                    <tr>
+                                        <td>@metric.Name</td>
+                                        <td>@metric.MetricType</td>
+                                        <td>@(metric.Category ?? "—")</td>
+                                        <td>@(string.IsNullOrWhiteSpace(metric.Description) ? "—" : (metric.Description.Length > 100 ? metric.Description[..100] + "..." : metric.Description))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (customMetrics.Any())
+                {
+                    <h3 class="mt-4 mb-3">Custom Metrics</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var metric in customMetrics)
+                                {
+                                    <tr>
+                                        <td>@metric.Name</td>
+                                        <td>@metric.MetricType</td>
+                                        <td>@(metric.Category ?? "—")</td>
+                                        <td>@(string.IsNullOrWhiteSpace(metric.Description) ? "—" : (metric.Description.Length > 100 ? metric.Description[..100] + "..." : metric.Description))</td>
+                                        <td>
+                                            <a href="/Metrics/Edit/@metric.Id" class="btn btn-sm btn-outline-primary me-2">
+                                                <span class="bi bi-pencil"></span> Edit
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmation(metric)">
+                                                <span class="bi bi-trash"></span> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (!templateMetrics.Any() && !customMetrics.Any())
+                {
+                    <div class="alert alert-info" role="alert">
+                        <p>No metrics found. <a href="/Metrics/Add">Add your first custom metric</a> to get started.</p>
+                    </div>
+                }
+            }
+            else
+            {
+                <p>Loading...</p>
+            }
+        </div>
+    </div>
+</div>
+
+@if (metricToDelete != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>@metricToDelete.Name</strong>? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<Metric>? metrics;
+    private List<Metric> templateMetrics = new();
+    private List<Metric> customMetrics = new();
+    private ApplicationUser? currentUser;
+    private Metric? metricToDelete;
+    private string? ErrorMessage;
+    private bool isDeleting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null && currentUser.FamilyId.HasValue)
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser?.FamilyId != null)
+                {
+                    metrics = (await MetricService.GetAllMetricsAsync(currentUser.FamilyId.Value)).ToList();
+                    templateMetrics = metrics.Where(m => m.IsTemplate).ToList();
+                    customMetrics = metrics.Where(m => !m.IsTemplate).ToList();
+                }
+            }
+        }
+    }
+
+    private void ShowDeleteConfirmation(Metric metric)
+    {
+        metricToDelete = metric;
+    }
+
+    private void CancelDelete()
+    {
+        metricToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (metricToDelete == null)
+            return;
+
+        isDeleting = true;
+        ErrorMessage = null;
+
+        var result = await MetricService.DeleteMetricAsync(metricToDelete.Id);
+
+        if (result.Succeeded)
+        {
+            if (currentUser?.FamilyId != null)
+            {
+                metrics = (await MetricService.GetAllMetricsAsync(currentUser.FamilyId.Value)).ToList();
+                templateMetrics = metrics.Where(m => m.IsTemplate).ToList();
+                customMetrics = metrics.Where(m => !m.IsTemplate).ToList();
+            }
+            metricToDelete = null;
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+        }
+
+        isDeleting = false;
+    }
+}
+

@@ -1,0 +1,334 @@
+@page "/Students/{StudentId:int}/Subjects/{SubjectId:int}/DailyLog/Add"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using System.Text.Json
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@using TheFamilyDaybook.Web.ViewModels
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IStudentService StudentService
+@inject ISubjectService SubjectService
+@inject IDailyLogService DailyLogService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Add Daily Log - @(student?.Name ?? "Student") - @(subject?.Name ?? "Subject")</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Add Daily Log</h3>
+                    <p class="mb-0 text-muted">Student: <strong>@(student?.Name ?? "")</strong> | Subject: <strong>@(subject?.Name ?? "")</strong></p>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @ErrorMessage
+                        </div>
+                    }
+
+                    @if (student != null && subject != null && currentUser?.FamilyId != null)
+                    {
+                        <EditForm Model="@dailyLogModel" OnValidSubmit="@HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label for="date" class="form-label">Date <span class="text-danger">*</span></label>
+                                <InputDate id="date" class="form-control" @bind-Value="dailyLogModel.Date" />
+                                <ValidationMessage For="@(() => dailyLogModel.Date)" />
+                            </div>
+
+                            @if (availableMetrics != null && availableMetrics.Any())
+                            {
+                                <hr />
+                                <h4>Metrics</h4>
+                                <p class="text-muted">Record values for the metrics configured for this student and subject.</p>
+
+                                @foreach (var metric in availableMetrics)
+                                {
+                                    var metricValue = dailyLogModel.MetricValues.FirstOrDefault(mv => mv.MetricId == metric.Id);
+                                    if (metricValue == null)
+                                    {
+                                        metricValue = new MetricValueModel
+                                        {
+                                            MetricId = metric.Id,
+                                            MetricName = metric.Name,
+                                            MetricType = metric.MetricType,
+                                            Category = metric.Category,
+                                            PossibleValues = metric.PossibleValues,
+                                            NumericConfig = metric.NumericConfig
+                                        };
+                                        dailyLogModel.MetricValues.Add(metricValue);
+                                    }
+
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title">@metric.Name</h6>
+                                            @if (!string.IsNullOrWhiteSpace(metric.Description))
+                                            {
+                                                <p class="text-muted small">@metric.Description</p>
+                                            }
+
+                                            @if (metric.MetricType == MetricType.Boolean)
+                                            {
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           id="metric_@metric.Id"
+                                                           checked="@metricValue.BooleanValue"
+                                                           @onchange="@((ChangeEventArgs e) => UpdateBooleanValue(metricValue, e.Value?.ToString() == "True"))" />
+                                                    <label class="form-check-label" for="metric_@metric.Id">
+                                                        @(metricValue.BooleanValue == true ? "Yes" : "No")
+                                                    </label>
+                                                </div>
+                                            }
+                                            else if (metric.MetricType == MetricType.Categorical)
+                                            {
+                                                <div class="mb-2">
+                                                    <select class="form-select" 
+                                                            @bind="metricValue.CategoricalValue"
+                                                            @bind:after="StateHasChanged">
+                                                        <option value="">-- Select --</option>
+                                                        @if (!string.IsNullOrWhiteSpace(metric.PossibleValues))
+                                                        {
+                                                            try
+                                                            {
+                                                                var values = JsonSerializer.Deserialize<List<string>>(metric.PossibleValues);
+                                                                @if (values != null)
+                                                                {
+                                                                    @foreach (var value in values)
+                                                                    {
+                                                                        <option value="@value">@value</option>
+                                                                    }
+                                                                }
+                                                            }
+                                                            catch { }
+                                                        }
+                                                    </select>
+                                                </div>
+                                            }
+                                            else if (metric.MetricType == MetricType.Numeric)
+                                            {
+                                                decimal? min = null;
+                                                decimal? max = null;
+                                                string? unit = null;
+
+                                                @if (!string.IsNullOrWhiteSpace(metric.NumericConfig))
+                                                {
+                                                    try
+                                                    {
+                                                        var config = JsonSerializer.Deserialize<Dictionary<string, object>>(metric.NumericConfig);
+                                                        if (config != null)
+                                                        {
+                                                            if (config.ContainsKey("Min") && decimal.TryParse(config["Min"].ToString(), out var minVal))
+                                                                min = minVal;
+                                                            if (config.ContainsKey("Max") && decimal.TryParse(config["Max"].ToString(), out var maxVal))
+                                                                max = maxVal;
+                                                            if (config.ContainsKey("Unit"))
+                                                                unit = config["Unit"].ToString();
+                                                        }
+                                                    }
+                                                    catch { }
+                                                }
+
+                                                <div class="input-group">
+                                                    <InputNumber class="form-control" 
+                                                                 @bind-Value="metricValue.NumericValue"
+                                                                 min="@min"
+                                                                 max="@max" />
+                                                    @if (!string.IsNullOrWhiteSpace(unit))
+                                                    {
+                                                        <span class="input-group-text">@unit</span>
+                                                    }
+                                                </div>
+                                                @if (min.HasValue || max.HasValue)
+                                                {
+                                                    <small class="form-text text-muted">
+                                                        @if (min.HasValue && max.HasValue)
+                                                        {
+                                                            <text>Range: @min - @max</text>
+                                                        }
+                                                        else if (min.HasValue)
+                                                        {
+                                                            <text>Minimum: @min</text>
+                                                        }
+                                                        else if (max.HasValue)
+                                                        {
+                                                            <text>Maximum: @max</text>
+                                                        }
+                                                    </small>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else if (availableMetrics != null)
+                            {
+                                <div class="alert alert-info" role="alert">
+                                    <p>No metrics configured for this student and subject. <a href="/Students/@StudentId/Metrics">Configure metrics</a> first.</p>
+                                </div>
+                            }
+
+                            <hr />
+
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notes</label>
+                                <InputTextArea id="notes" class="form-control" rows="4" @bind-Value="dailyLogModel.Notes" />
+                                <ValidationMessage For="@(() => dailyLogModel.Notes)" />
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="/Students/@StudentId/DailyLog/SelectSubject" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                    @if (isLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    Save Daily Log
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                    else if (isLoading)
+                    {
+                        <p>Loading...</p>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <p>Student or subject not found.</p>
+                        </div>
+                        <a href="/Students" class="btn btn-secondary">Back to Students</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int StudentId { get; set; }
+
+    [Parameter]
+    public int SubjectId { get; set; }
+
+    private ApplicationUser? currentUser;
+    private Student? student;
+    private Subject? subject;
+    private DailyLogModel dailyLogModel = new();
+    private List<Metric>? availableMetrics;
+    private string? ErrorMessage;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser != null)
+                {
+                    student = await StudentService.GetStudentByIdAsync(StudentId);
+                    subject = await SubjectService.GetSubjectByIdAsync(SubjectId);
+
+                    if (student != null && currentUser.FamilyId.HasValue && student.FamilyId != currentUser.FamilyId.Value)
+                    {
+                        student = null;
+                    }
+                    else if (subject != null && currentUser.FamilyId.HasValue && subject.FamilyId != currentUser.FamilyId.Value)
+                    {
+                        subject = null;
+                    }
+                    else if (student != null && subject != null && currentUser.FamilyId.HasValue)
+                    {
+                        // Check if a log already exists for today
+                        var today = DateTime.Today;
+                        var existingLog = await DailyLogService.GetDailyLogAsync(StudentId, SubjectId, today);
+                        if (existingLog != null)
+                        {
+                            // Redirect to edit page if log exists
+                            NavigationManager.NavigateTo($"/DailyLogs/Edit/{existingLog.Id}");
+                            return;
+                        }
+
+                        dailyLogModel.StudentId = StudentId;
+                        dailyLogModel.StudentName = student.Name;
+                        dailyLogModel.SubjectId = SubjectId;
+                        dailyLogModel.SubjectName = subject.Name;
+                        dailyLogModel.Date = DateTime.Today;
+
+                        availableMetrics = (await DailyLogService.GetAvailableMetricsForDailyLogAsync(StudentId, SubjectId, currentUser.FamilyId.Value)).ToList();
+                    }
+                }
+            }
+        }
+    }
+
+    private void UpdateBooleanValue(MetricValueModel metricValue, bool value)
+    {
+        metricValue.BooleanValue = value;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (student == null || subject == null)
+        {
+            ErrorMessage = "Student or subject not found.";
+            return;
+        }
+
+        ErrorMessage = null;
+        isLoading = true;
+
+        // Check if a log already exists for this date (safety check in case date was changed)
+        var existingLog = await DailyLogService.GetDailyLogAsync(StudentId, SubjectId, dailyLogModel.Date);
+        if (existingLog != null)
+        {
+            ErrorMessage = "A daily log already exists for this student, subject, and date. Redirecting to edit page...";
+            isLoading = false;
+            await Task.Delay(1500); // Brief delay to show message
+            NavigationManager.NavigateTo($"/DailyLogs/Edit/{existingLog.Id}");
+            return;
+        }
+
+        // Remove metric values that aren't set
+        dailyLogModel.MetricValues = dailyLogModel.MetricValues
+            .Where(mv => mv.BooleanValue.HasValue || 
+                        !string.IsNullOrWhiteSpace(mv.CategoricalValue) || 
+                        mv.NumericValue.HasValue)
+            .ToList();
+
+        var result = await DailyLogService.CreateDailyLogAsync(dailyLogModel);
+
+        if (result.Succeeded)
+        {
+            NavigationManager.NavigateTo($"/Students/{StudentId}/DailyLog/SelectSubject");
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+            isLoading = false;
+        }
+    }
+}
+

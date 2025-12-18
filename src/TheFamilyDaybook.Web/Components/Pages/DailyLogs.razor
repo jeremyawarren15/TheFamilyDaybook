@@ -1,0 +1,210 @@
+@page "/DailyLogs"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IDailyLogService DailyLogService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Daily Logs</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Daily Logs</h1>
+                <a href="/Students" class="btn btn-primary">
+                    <span class="bi bi-plus-circle"></span> Add Daily Log
+                </a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @ErrorMessage
+                </div>
+            }
+
+            @if (dailyLogs != null && dailyLogs.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Student</th>
+                                <th>Subject</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in dailyLogs)
+                            {
+                                <tr>
+                                    <td>@log.Date.ToString("MM/dd/yyyy")</td>
+                                    <td>@log.Student.Name</td>
+                                    <td>@log.Subject.Name</td>
+                                    <td>@(string.IsNullOrWhiteSpace(log.Notes) ? "—" : (log.Notes.Length > 50 ? log.Notes[..50] + "..." : log.Notes))</td>
+                                    <td>
+                                        <a href="/DailyLogs/Edit/@log.Id" class="btn btn-sm btn-outline-primary me-2">
+                                            <span class="bi bi-pencil"></span> Edit
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => ShowDeleteConfirmation(log)">
+                                            <span class="bi bi-trash"></span> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (dailyLogs != null)
+            {
+                <div class="alert alert-info" role="alert">
+                    <p>No daily logs found. <a href="/Students">Add your first daily log</a> to get started.</p>
+                </div>
+            }
+            else
+            {
+                <p>Loading...</p>
+            }
+        </div>
+    </div>
+</div>
+
+@if (logToDelete != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the daily log for <strong>@logToDelete.Student.Name</strong> - <strong>@logToDelete.Subject.Name</strong> on <strong>@logToDelete.Date.ToString("MM/dd/yyyy")</strong>? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<DailyLog>? dailyLogs;
+    private ApplicationUser? currentUser;
+    private DailyLog? logToDelete;
+    private string? ErrorMessage;
+    private bool isDeleting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null && currentUser.FamilyId.HasValue)
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family!)
+                    .ThenInclude(f => f.Students)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser?.FamilyId != null && currentUser.Family?.Students != null)
+                {
+                    var allLogs = new List<DailyLog>();
+                    var family = currentUser.Family;
+                    if (family != null)
+                    {
+                        foreach (var student in family.Students)
+                        {
+                            var studentLogs = await DailyLogService.GetDailyLogsForStudentAsync(student.Id);
+                            allLogs.AddRange(studentLogs);
+                        }
+                        dailyLogs = allLogs.OrderByDescending(dl => dl.Date).ThenBy(dl => dl.Student.Name).ToList();
+                    }
+                }
+            }
+        }
+    }
+
+    private void ShowDeleteConfirmation(DailyLog log)
+    {
+        logToDelete = log;
+    }
+
+    private void CancelDelete()
+    {
+        logToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (logToDelete == null)
+            return;
+
+        isDeleting = true;
+        ErrorMessage = null;
+
+        var result = await DailyLogService.DeleteDailyLogAsync(logToDelete.Id);
+
+        if (result.Succeeded)
+        {
+            // Refresh the list
+            if (currentUser?.FamilyId != null)
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family!)
+                    .ThenInclude(f => f.Students)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser?.Family?.Students != null)
+                {
+                    var allLogs = new List<DailyLog>();
+                    var family = currentUser.Family;
+                    if (family != null)
+                    {
+                        foreach (var student in family.Students)
+                        {
+                            var studentLogs = await DailyLogService.GetDailyLogsForStudentAsync(student.Id);
+                            allLogs.AddRange(studentLogs);
+                        }
+                        dailyLogs = allLogs.OrderByDescending(dl => dl.Date).ThenBy(dl => dl.Student.Name).ToList();
+                    }
+                }
+            }
+            logToDelete = null;
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+        }
+
+        isDeleting = false;
+    }
+}
+

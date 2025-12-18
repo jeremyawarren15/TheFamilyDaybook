@@ -1,0 +1,239 @@
+@page "/Students/{StudentId:int}/Subjects/{SubjectId:int}/Metrics"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@using TheFamilyDaybook.Web.ViewModels
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IStudentService StudentService
+@inject ISubjectService SubjectService
+@inject IStudentSubjectMetricService StudentSubjectMetricService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Configure Metrics - @(student?.Name ?? "Student") - @(subject?.Name ?? "Subject")</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1>Configure Metrics</h1>
+                    <p class="text-muted mb-0">Student: <strong>@(student?.Name ?? "")</strong> | Subject: <strong>@(subject?.Name ?? "")</strong></p>
+                </div>
+                <a href="/Students/@StudentId/Metrics" class="btn btn-secondary">
+                    <span class="bi bi-arrow-left"></span> Back to Student Metrics
+                </a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @ErrorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(SuccessMessage))
+            {
+                <div class="alert alert-success" role="alert">
+                    @SuccessMessage
+                </div>
+            }
+
+            @if (student != null && subject != null && metricConfigs != null)
+            {
+                <div class="card">
+                    <div class="card-body">
+                        <p class="text-muted">
+                            Configure which metrics apply to this student for this specific subject. 
+                            Metrics marked with <span class="badge bg-info">All Subjects</span> are enabled for all subjects by default and can be overridden here.
+                        </p>
+
+                        <EditForm Model="@configForm" OnValidSubmit="@HandleSubmit">
+                            @if (metricConfigs.Any())
+                            {
+                                var groupedConfigs = metricConfigs.GroupBy(c => c.Category ?? "Other").OrderBy(g => g.Key);
+                                
+                                @foreach (var group in groupedConfigs)
+                                {
+                                    <div class="mb-4">
+                                        <h5>@group.Key</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 40%;">Metric</th>
+                                                        <th style="width: 15%;">Type</th>
+                                                        <th style="width: 20%;">Scope</th>
+                                                        <th style="width: 25%;">Enabled</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var config in group.OrderBy(c => c.MetricName))
+                                                    {
+                                                        var index = metricConfigs.IndexOf(config);
+                                                        <tr>
+                                                            <td>@config.MetricName</td>
+                                                            <td>@config.MetricType</td>
+                                                            <td>
+                                                                @if (config.AppliesToAllSubjects)
+                                                                {
+                                                                    <span class="badge bg-info">All Subjects</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-secondary">Per Subject</span>
+                                                                }
+                                                            </td>
+                                                            <td>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" 
+                                                                           checked="@config.IsEnabled"
+                                                                           @onchange="@((ChangeEventArgs e) => UpdateConfigEnabled(index, e.Value?.ToString() == "True"))" />
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="alert alert-info" role="alert">
+                                    <p>No metrics available for this student. <a href="/Students/@StudentId/Metrics">Configure metrics</a> at the student level first.</p>
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="/Students/@StudentId/Metrics" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                    @if (isLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    Save Configuration
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            }
+            else if (isLoading)
+            {
+                <p>Loading...</p>
+            }
+            else
+            {
+                <div class="alert alert-danger" role="alert">
+                    <p>Student or subject not found.</p>
+                </div>
+                <a href="/Students" class="btn btn-secondary">Back to Students</a>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int StudentId { get; set; }
+
+    [Parameter]
+    public int SubjectId { get; set; }
+
+    private ApplicationUser? currentUser;
+    private Student? student;
+    private Subject? subject;
+    private List<StudentSubjectMetricConfigModel>? metricConfigs;
+    private object configForm = new(); // Dummy form model
+    private string? ErrorMessage;
+    private string? SuccessMessage;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser != null)
+                {
+                    student = await StudentService.GetStudentByIdAsync(StudentId);
+                    subject = await SubjectService.GetSubjectByIdAsync(SubjectId);
+
+                    if (student != null && currentUser.FamilyId.HasValue && student.FamilyId != currentUser.FamilyId.Value)
+                    {
+                        student = null;
+                        ErrorMessage = "You do not have permission to configure metrics for this student.";
+                    }
+                    else if (subject != null && currentUser.FamilyId.HasValue && subject.FamilyId != currentUser.FamilyId.Value)
+                    {
+                        subject = null;
+                        ErrorMessage = "You do not have permission to configure metrics for this subject.";
+                    }
+                    else if (student != null && subject != null && currentUser.FamilyId.HasValue)
+                    {
+                        metricConfigs = (await StudentSubjectMetricService.GetAvailableMetricsForStudentSubjectAsync(StudentId, SubjectId, currentUser.FamilyId.Value)).ToList();
+                    }
+                }
+            }
+        }
+    }
+
+    private void UpdateConfigEnabled(int index, bool isEnabled)
+    {
+        if (metricConfigs != null && index >= 0 && index < metricConfigs.Count)
+        {
+            metricConfigs[index].IsEnabled = isEnabled;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (student == null || subject == null || metricConfigs == null)
+        {
+            ErrorMessage = "Invalid configuration.";
+            return;
+        }
+
+        ErrorMessage = null;
+        SuccessMessage = null;
+        isLoading = true;
+
+        var result = await StudentSubjectMetricService.SaveStudentSubjectMetricConfigAsync(StudentId, SubjectId, metricConfigs);
+
+        if (result.Succeeded)
+        {
+            SuccessMessage = result.SuccessMessage ?? "Metrics configured successfully!";
+            // Reload to get updated state
+            if (currentUser?.FamilyId != null)
+            {
+                metricConfigs = (await StudentSubjectMetricService.GetAvailableMetricsForStudentSubjectAsync(StudentId, SubjectId, currentUser.FamilyId.Value)).ToList();
+            }
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+        }
+
+        isLoading = false;
+    }
+}
+

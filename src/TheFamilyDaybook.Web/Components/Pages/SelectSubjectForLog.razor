@@ -1,0 +1,151 @@
+@page "/Students/{StudentId:int}/DailyLog/SelectSubject"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IStudentService StudentService
+@inject IStudentSubjectService StudentSubjectService
+@inject IDailyLogService DailyLogService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Select Subject - @(student?.Name ?? "Student")</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1>Select Subject</h1>
+                    <p class="text-muted mb-0">Student: <strong>@(student?.Name ?? "")</strong></p>
+                </div>
+                <a href="/Students" class="btn btn-secondary">
+                    <span class="bi bi-arrow-left"></span> Back to Students
+                </a>
+            </div>
+
+            @if (student != null && subjects != null)
+            {
+                @if (subjects.Any())
+                {
+                    <div class="row">
+                        @foreach (var subject in subjects)
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="card-title">@subject.Name</h5>
+                                        @if (!string.IsNullOrWhiteSpace(subject.Description))
+                                        {
+                                            <p class="card-text text-muted">@(subject.Description.Length > 100 ? subject.Description[..100] + "..." : subject.Description)</p>
+                                        }
+                                        <div class="mt-auto">
+                                            @if (existingLogs.ContainsKey(subject.Id) && existingLogs[subject.Id].HasValue)
+                                            {
+                                                <div class="mb-2">
+                                                    <span class="badge bg-success">Log exists for today</span>
+                                                </div>
+                                                <a href="/DailyLogs/Edit/@existingLogs[subject.Id]!.Value" class="btn btn-primary w-100">
+                                                    <span class="bi bi-pencil"></span> Edit Daily Log
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a href="/Students/@StudentId/Subjects/@subject.Id/DailyLog/Add" class="btn btn-primary w-100">
+                                                    <span class="bi bi-plus-circle"></span> Add Daily Log
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info" role="alert">
+                        <p>No subjects assigned to this student. <a href="/Subjects">Assign subjects</a> first.</p>
+                    </div>
+                }
+            }
+            else if (isLoading)
+            {
+                <p>Loading...</p>
+            }
+            else
+            {
+                <div class="alert alert-danger" role="alert">
+                    <p>Student not found.</p>
+                </div>
+                <a href="/Students" class="btn btn-secondary">Back to Students</a>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int StudentId { get; set; }
+
+    private ApplicationUser? currentUser;
+    private Student? student;
+    private List<Subject>? subjects;
+    private Dictionary<int, int?> existingLogs = new(); // SubjectId -> DailyLogId (null if no log exists)
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+                if (currentUser != null)
+                {
+                    student = await StudentService.GetStudentByIdAsync(StudentId);
+
+                    if (student != null && currentUser.FamilyId.HasValue && student.FamilyId != currentUser.FamilyId.Value)
+                    {
+                        student = null;
+                    }
+                    else if (student != null)
+                    {
+                        subjects = (await StudentSubjectService.GetSubjectsForStudentAsync(StudentId)).ToList();
+                        
+                        // Check for existing logs for today
+                        var today = DateTime.Today;
+                        foreach (var subject in subjects)
+                        {
+                            var existingLog = await DailyLogService.GetDailyLogAsync(StudentId, subject.Id, today);
+                            if (existingLog != null)
+                            {
+                                existingLogs[subject.Id] = existingLog.Id;
+                            }
+                            else
+                            {
+                                existingLogs[subject.Id] = null;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

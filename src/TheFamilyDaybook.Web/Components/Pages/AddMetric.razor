@@ -1,0 +1,208 @@
+@page "/Metrics/Add"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using System.Text.Json
+@using TheFamilyDaybook.Data
+@using TheFamilyDaybook.Models
+@using TheFamilyDaybook.Web.Services
+@using TheFamilyDaybook.Web.ViewModels
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IMetricService MetricService
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Add Metric</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Add Custom Metric</h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @ErrorMessage
+                        </div>
+                    }
+
+                    @if (currentUser != null && currentUser.FamilyId.HasValue)
+                    {
+                        <EditForm Model="@metricModel" OnValidSubmit="@HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                                <InputText id="name" class="form-control" @bind-Value="metricModel.Name" />
+                                <ValidationMessage For="@(() => metricModel.Name)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <InputTextArea id="description" class="form-control" rows="3" @bind-Value="metricModel.Description" />
+                                <ValidationMessage For="@(() => metricModel.Description)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="metricType" class="form-label">Metric Type <span class="text-danger">*</span></label>
+                                <InputSelect id="metricType" class="form-select" @bind-Value="metricModel.MetricType">
+                                    <option value="@MetricType.Boolean">Boolean</option>
+                                    <option value="@MetricType.Categorical">Categorical</option>
+                                    <option value="@MetricType.Numeric">Numeric</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => metricModel.MetricType)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category</label>
+                                <InputText id="category" class="form-control" @bind-Value="metricModel.Category" />
+                                <ValidationMessage For="@(() => metricModel.Category)" />
+                                <small class="form-text text-muted">Optional category for grouping metrics (e.g., "Environmental", "Behavioral").</small>
+                            </div>
+
+                            @if (metricModel.MetricType == MetricType.Categorical)
+                            {
+                                <div class="mb-3">
+                                    <label for="possibleValues" class="form-label">Possible Values <span class="text-danger">*</span></label>
+                                    <InputTextArea id="possibleValues" class="form-control" rows="4" @bind-Value="possibleValuesText" />
+                                    <small class="form-text text-muted">Enter one value per line (e.g., Morning, Afternoon, Evening).</small>
+                                </div>
+                            }
+
+                            @if (metricModel.MetricType == MetricType.Numeric)
+                            {
+                                <div class="mb-3">
+                                    <label for="minValue" class="form-label">Minimum Value</label>
+                                    <InputNumber id="minValue" class="form-control" @bind-Value="minValue" />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="maxValue" class="form-label">Maximum Value</label>
+                                    <InputNumber id="maxValue" class="form-control" @bind-Value="maxValue" />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="unit" class="form-label">Unit</label>
+                                    <InputText id="unit" class="form-control" @bind-Value="unit" />
+                                    <small class="form-text text-muted">Optional unit (e.g., "minutes", "hours").</small>
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between">
+                                <a href="/Metrics" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                    @if (isLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    Add Metric
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                    else if (currentUser != null)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <p>You must be associated with a family to add metrics. Please contact support if you need assistance.</p>
+                        </div>
+                        <a href="/Metrics" class="btn btn-secondary">Back to Metrics</a>
+                    }
+                    else
+                    {
+                        <p>Loading...</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ApplicationUser? currentUser;
+    private MetricModel metricModel = new();
+    private string? ErrorMessage;
+    private bool isLoading = false;
+    private string possibleValuesText = string.Empty;
+    private decimal? minValue;
+    private decimal? maxValue;
+    private string unit = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            if (currentUser != null)
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                currentUser = await context.Users
+                    .Include(u => u.Family)
+                    .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (currentUser == null || !currentUser.FamilyId.HasValue)
+        {
+            ErrorMessage = "You must be associated with a family to add metrics.";
+            return;
+        }
+
+        ErrorMessage = null;
+        isLoading = true;
+
+        // Process possible values for categorical
+        if (metricModel.MetricType == MetricType.Categorical)
+        {
+            if (string.IsNullOrWhiteSpace(possibleValuesText))
+            {
+                ErrorMessage = "Possible values are required for categorical metrics.";
+                isLoading = false;
+                return;
+            }
+            var values = possibleValuesText.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(v => v.Trim())
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .ToList();
+            metricModel.PossibleValues = JsonSerializer.Serialize(values);
+        }
+
+        // Process numeric config
+        if (metricModel.MetricType == MetricType.Numeric)
+        {
+            var numericConfig = new Dictionary<string, object>();
+            if (minValue.HasValue)
+                numericConfig["Min"] = minValue.Value;
+            if (maxValue.HasValue)
+                numericConfig["Max"] = maxValue.Value;
+            if (!string.IsNullOrWhiteSpace(unit))
+                numericConfig["Unit"] = unit;
+            if (numericConfig.Any())
+                metricModel.NumericConfig = JsonSerializer.Serialize(numericConfig);
+        }
+
+        var result = await MetricService.CreateMetricAsync(currentUser.FamilyId.Value, metricModel);
+
+        if (result.Succeeded)
+        {
+            NavigationManager.NavigateTo("/Metrics");
+        }
+        else
+        {
+            ErrorMessage = result.ErrorMessage;
+            isLoading = false;
+        }
+    }
+}
+
