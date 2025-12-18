@@ -12,3 +12,4 @@ public interface ISubjectService
     Task<SubjectServiceResult> DeleteSubjectAsync(int subjectId);
 }
 
+
