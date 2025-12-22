@@ -122,19 +122,20 @@ public class DailyLogService : IDailyLogService
             // Add metric values
             foreach (var metricValue in model.MetricValues)
             {
-                if (!IsMetricValueSet(metricValue))
-                    continue;
-
                 var metric = await context.Metrics.FirstOrDefaultAsync(m => m.Id == metricValue.MetricId);
                 if (metric == null)
                     continue;
 
-                // Validate metric value
+                // Validate metric value (even if not set - if it's in the list, it should be validated)
                 var validationResult = ValidateMetricValue(metricValue, metric);
                 if (!validationResult.IsValid)
                 {
                     return DailyLogServiceResult.Failure(validationResult.ErrorMessage!);
                 }
+
+                // Only add metric value if it's actually set
+                if (!IsMetricValueSet(metricValue))
+                    continue;
 
                 var dailyLogMetricValue = new DailyLogMetricValue
                 {
@@ -200,19 +201,20 @@ public class DailyLogService : IDailyLogService
             // Add new metric values
             foreach (var metricValue in model.MetricValues)
             {
-                if (!IsMetricValueSet(metricValue))
-                    continue;
-
                 var metric = await context.Metrics.FirstOrDefaultAsync(m => m.Id == metricValue.MetricId);
                 if (metric == null)
                     continue;
 
-                // Validate metric value
+                // Validate metric value (even if not set - if it's in the list, it should be validated)
                 var validationResult = ValidateMetricValue(metricValue, metric);
                 if (!validationResult.IsValid)
                 {
                     return DailyLogServiceResult.Failure(validationResult.ErrorMessage!);
                 }
+
+                // Only add metric value if it's actually set
+                if (!IsMetricValueSet(metricValue))
+                    continue;
 
                 var dailyLogMetricValue = new DailyLogMetricValue
                 {
