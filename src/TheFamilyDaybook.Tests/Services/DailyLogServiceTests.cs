@@ -132,6 +132,88 @@ public class DailyLogServiceTests
     }
 
     [Test]
+    public async Task GetAvailableMetricsForDailyLogAsync_DelegatesToStudentSubjectMetricService()
+    {
+        // Arrange
+        var studentId = 1;
+        var subjectId = 2;
+        var familyId = 3;
+        var expectedMetrics = new List<Metric>
+        {
+            TestHelpers.CreateTestMetric(id: 1, familyId: familyId, name: "Metric 1"),
+            TestHelpers.CreateTestMetric(id: 2, familyId: familyId, name: "Metric 2")
+        };
+
+        A.CallTo(() => _studentSubjectMetricService.GetMetricsForDailyLogAsync(
+            studentId, subjectId, familyId))
+            .Returns(expectedMetrics);
+
+        // Act
+        var result = await _service.GetAvailableMetricsForDailyLogAsync(studentId, subjectId, familyId);
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        var resultList = result.ToList();
+        Assert.That(resultList.Count, Is.EqualTo(2));
+        Assert.That(resultList[0].Id, Is.EqualTo(1));
+        Assert.That(resultList[1].Id, Is.EqualTo(2));
+        
+        A.CallTo(() => _studentSubjectMetricService.GetMetricsForDailyLogAsync(
+            studentId, subjectId, familyId))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Test]
+    public async Task GetAvailableMetricsForDailyLogAsync_WithEmptyResult_ReturnsEmpty()
+    {
+        // Arrange
+        var studentId = 1;
+        var subjectId = 2;
+        var familyId = 3;
+        var emptyMetrics = Enumerable.Empty<Metric>();
+
+        A.CallTo(() => _studentSubjectMetricService.GetMetricsForDailyLogAsync(
+            studentId, subjectId, familyId))
+            .Returns(emptyMetrics);
+
+        // Act
+        var result = await _service.GetAvailableMetricsForDailyLogAsync(studentId, subjectId, familyId);
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result, Is.Empty);
+        
+        A.CallTo(() => _studentSubjectMetricService.GetMetricsForDailyLogAsync(
+            studentId, subjectId, familyId))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Test]
+    public async Task GetAvailableMetricsForDailyLogAsync_PassesCorrectParameters()
+    {
+        // Arrange
+        var studentId = 10;
+        var subjectId = 20;
+        var familyId = 30;
+        var expectedMetrics = new List<Metric>
+        {
+            TestHelpers.CreateTestMetric(id: 1, familyId: familyId)
+        };
+
+        A.CallTo(() => _studentSubjectMetricService.GetMetricsForDailyLogAsync(
+            A<int>._, A<int>._, A<int>._))
+            .Returns(expectedMetrics);
+
+        // Act
+        await _service.GetAvailableMetricsForDailyLogAsync(studentId, subjectId, familyId);
+
+        // Assert
+        A.CallTo(() => _studentSubjectMetricService.GetMetricsForDailyLogAsync(
+            studentId, subjectId, familyId))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Test]
     public async Task CreateDailyLogAsync_WithValidData_ReturnsSuccess()
     {
         // Arrange
